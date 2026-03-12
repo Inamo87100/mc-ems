@@ -1,9 +1,9 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-class NFEMS_Settings {
+class MCEMS_Settings {
 
-    const OPTION_KEY = 'nfems_settings';
+    const OPTION_KEY = 'mcems_settings';
 
     public static function defaults(): array {
         return [
@@ -15,8 +15,8 @@ class NFEMS_Settings {
             'anticipo_ore_prenotazione' => 48,
             'consenti_annullamento'     => 1,
             'annullamento_ore'          => 48,
-            'cap_view_bookings'         => 'nfems_view_bookings',
-            'cap_assign_proctor'        => 'nfems_assign_proctor',
+            'cap_view_bookings'         => 'mcems_view_bookings',
+            'cap_assign_proctor'        => 'mcems_assign_proctor',
             'cap_admin'                 => 'manage_options',
 
             // Calendar permissions / behaviour
@@ -190,11 +190,11 @@ class NFEMS_Settings {
 
     public static function menu(): void {
         add_submenu_page(
-            'edit.php?post_type=' . NFEMS_CPT_Sessioni_Esame::CPT,
+            'edit.php?post_type=' . MCEMS_CPT_Sessioni_Esame::CPT,
             __('Settings', 'mc-ems'),
             __('Settings', 'mc-ems'),
             'manage_options',
-            'nfems-settings-cpt',
+            'mcems-settings-cpt',
             [__CLASS__, 'render']
         );
     }
@@ -203,11 +203,11 @@ class NFEMS_Settings {
         add_action('wp_ajax_mcems_search_pages', [__CLASS__, 'ajax_search_pages']);
         register_setting(self::OPTION_KEY, self::OPTION_KEY, [__CLASS__, 'sanitize']);
 
-        add_settings_section('nfems_section_main', __('Bookings', 'mc-ems'), function () {
+        add_settings_section('mcems_section_main', __('Bookings', 'mc-ems'), function () {
             echo '<p class="description">Main rules for booking availability and cancellations.</p>';
         }, self::OPTION_KEY);
 
-        add_settings_field('anticipo_ore_prenotazione', __('Booking allowed up to (hours)', 'mc-ems'), [__CLASS__, 'field_number'], self::OPTION_KEY, 'nfems_section_main', [
+        add_settings_field('anticipo_ore_prenotazione', __('Booking allowed up to (hours)', 'mc-ems'), [__CLASS__, 'field_number'], self::OPTION_KEY, 'mcems_section_main', [
             'key' => 'anticipo_ore_prenotazione',
             'min' => 0,
             'max' => 720,
@@ -215,12 +215,12 @@ class NFEMS_Settings {
             'desc'=> 'Example: 48 = do not show sessions with notice < 48 hours.'
         ]);
 
-        add_settings_field('consenti_annullamento', __('Allow booking cancellation', 'mc-ems'), [__CLASS__, 'field_checkbox'], self::OPTION_KEY, 'nfems_section_main', [
+        add_settings_field('consenti_annullamento', __('Allow booking cancellation', 'mc-ems'), [__CLASS__, 'field_checkbox'], self::OPTION_KEY, 'mcems_section_main', [
             'key' => 'consenti_annullamento',
             'desc'=> 'If disabled, the user will not be able to cancel from the front-end.'
         ]);
 
-        add_settings_field('annullamento_ore', __('Cancellation allowed up to (hours)', 'mc-ems'), [__CLASS__, 'field_number'], self::OPTION_KEY, 'nfems_section_main', [
+        add_settings_field('annullamento_ore', __('Cancellation allowed up to (hours)', 'mc-ems'), [__CLASS__, 'field_number'], self::OPTION_KEY, 'mcems_section_main', [
             'key' => 'annullamento_ore',
             'min' => 0,
             'max' => 720,
@@ -228,16 +228,16 @@ class NFEMS_Settings {
             'desc'=> __('Example: 48 = cancellation allowed only if more than 48 hours remain.', 'mc-ems')
         ]);
 
-        add_settings_section('nfems_section_gate', __('Course access settings', 'mc-ems'), function () {
+        add_settings_section('mcems_section_gate', __('Course access settings', 'mc-ems'), function () {
             echo '<p class="description">Define how long an exam booking remains valid for course access after the exam session time.</p>';
         }, self::OPTION_KEY);
 
-        add_settings_field('tutor_gate_enabled', __('Enable course access gate', 'mc-ems'), [__CLASS__, 'field_checkbox'], self::OPTION_KEY, 'nfems_section_gate', [
+        add_settings_field('tutor_gate_enabled', __('Enable course access gate', 'mc-ems'), [__CLASS__, 'field_checkbox'], self::OPTION_KEY, 'mcems_section_gate', [
             'key'  => 'tutor_gate_enabled',
             'desc' => __('If enabled, users can access protected Tutor LMS courses only when they have a valid exam booking for that course.', 'mc-ems'),
         ]);
 
-        add_settings_field('tutor_gate_unlock_lead_minutes', __('Unlock before session (minutes)', 'mc-ems'), [__CLASS__, 'field_number'], self::OPTION_KEY, 'nfems_section_gate', [
+        add_settings_field('tutor_gate_unlock_lead_minutes', __('Unlock before session (minutes)', 'mc-ems'), [__CLASS__, 'field_number'], self::OPTION_KEY, 'mcems_section_gate', [
             'key'  => 'tutor_gate_unlock_lead_minutes',
             'min'  => 0,
             'max'  => 1440,
@@ -245,7 +245,7 @@ class NFEMS_Settings {
             'desc' => __('Example: 15 = allow course access 15 minutes before the booked exam time.', 'mc-ems'),
         ]);
 
-        add_settings_field('tutor_gate_booking_expiry_combo', __('Booking validity after session', 'mc-ems'), [__CLASS__, 'field_booking_expiry_combo'], self::OPTION_KEY, 'nfems_section_gate', [
+        add_settings_field('tutor_gate_booking_expiry_combo', __('Booking validity after session', 'mc-ems'), [__CLASS__, 'field_booking_expiry_combo'], self::OPTION_KEY, 'mcems_section_gate', [
             'value_key' => 'tutor_gate_booking_expiry_value',
             'unit_key'  => 'tutor_gate_booking_expiry_unit',
             'min'       => 0,
@@ -254,179 +254,179 @@ class NFEMS_Settings {
             'desc'      => '0 = never expires.'
         ]);
 
-        add_settings_field('tutor_gate_course_ids', __('Protected courses', 'mc-ems'), [__CLASS__, 'field_course_multiselect'], self::OPTION_KEY, 'nfems_section_gate', [
+        add_settings_field('tutor_gate_course_ids', __('Protected courses', 'mc-ems'), [__CLASS__, 'field_course_multiselect'], self::OPTION_KEY, 'mcems_section_gate', [
             'key'  => 'tutor_gate_course_ids',
             'desc' => __('If you select one or more courses, the course access gate will apply only to those courses. If left empty, the gate applies to all Tutor LMS courses.', 'mc-ems'),
         ]);
 
-        add_settings_section('nfems_section_email', __('Email settings', 'mc-ems'), function () {
+        add_settings_section('mcems_section_email', __('Email settings', 'mc-ems'), function () {
             echo '<p class="description">Choose which notifications to send and configure sender/recipient settings.</p>';
         }, self::OPTION_KEY);
 
-        add_settings_field('email_sender_name', __('Sender name', 'mc-ems'), [__CLASS__, 'field_text'], self::OPTION_KEY, 'nfems_section_email', [
+        add_settings_field('email_sender_name', __('Sender name', 'mc-ems'), [__CLASS__, 'field_text'], self::OPTION_KEY, 'mcems_section_email', [
             'key' => 'email_sender_name',
             'placeholder' => __('Example: MC-EMS Notifications', 'mc-ems'),
             'desc' => __('Name shown as the email sender.', 'mc-ems')
         ]);
 
-        add_settings_field('email_sender_email', __('Sender email', 'mc-ems'), [__CLASS__, 'field_text'], self::OPTION_KEY, 'nfems_section_email', [
+        add_settings_field('email_sender_email', __('Sender email', 'mc-ems'), [__CLASS__, 'field_text'], self::OPTION_KEY, 'mcems_section_email', [
             'key' => 'email_sender_email',
             'type' => 'email',
             'placeholder' => __('notifications@example.com', 'mc-ems'),
             'desc' => __('Email address used in the From header.', 'mc-ems')
         ]);
 
-        add_settings_field('email_admin_recipients', __('Admin recipients', 'mc-ems'), [__CLASS__, 'field_textarea'], self::OPTION_KEY, 'nfems_section_email', [
+        add_settings_field('email_admin_recipients', __('Admin recipients', 'mc-ems'), [__CLASS__, 'field_textarea'], self::OPTION_KEY, 'mcems_section_email', [
             'key' => 'email_admin_recipients',
             'placeholder' => __('admin@example.com, exams@example.com', 'mc-ems'),
             'desc' => __('Comma-separated list of recipients for admin notifications.', 'mc-ems')
         ]);
 
-        add_settings_field('email_send_booking_confirmation', __('Exam booking confirmation email', 'mc-ems'), [__CLASS__, 'field_checkbox'], self::OPTION_KEY, 'nfems_section_email', [
+        add_settings_field('email_send_booking_confirmation', __('Exam booking confirmation email', 'mc-ems'), [__CLASS__, 'field_checkbox'], self::OPTION_KEY, 'mcems_section_email', [
             'key' => 'email_send_booking_confirmation',
             'desc'=> __('Send a confirmation email to the candidate after a booking is created.', 'mc-ems')
         ]);
 
-        add_settings_field('email_send_booking_cancellation', __('Exam booking cancellation email', 'mc-ems'), [__CLASS__, 'field_checkbox'], self::OPTION_KEY, 'nfems_section_email', [
+        add_settings_field('email_send_booking_cancellation', __('Exam booking cancellation email', 'mc-ems'), [__CLASS__, 'field_checkbox'], self::OPTION_KEY, 'mcems_section_email', [
             'key' => 'email_send_booking_cancellation',
             'desc'=> __('Send a confirmation email to the candidate after a exam booking is cancelled.', 'mc-ems')
         ]);
 
-        add_settings_field('email_send_admin_booking', __('Admin exam booking notification', 'mc-ems'), [__CLASS__, 'field_checkbox'], self::OPTION_KEY, 'nfems_section_email', [
+        add_settings_field('email_send_admin_booking', __('Admin exam booking notification', 'mc-ems'), [__CLASS__, 'field_checkbox'], self::OPTION_KEY, 'mcems_section_email', [
             'key' => 'email_send_admin_booking',
             'desc'=> __('Notify the configured admin recipients when an exam booking is created.', 'mc-ems')
         ]);
 
-        add_settings_field('email_send_admin_cancellation', __('Admin exam booking cancellation notification', 'mc-ems'), [__CLASS__, 'field_checkbox'], self::OPTION_KEY, 'nfems_section_email', [
+        add_settings_field('email_send_admin_cancellation', __('Admin exam booking cancellation notification', 'mc-ems'), [__CLASS__, 'field_checkbox'], self::OPTION_KEY, 'mcems_section_email', [
             'key' => 'email_send_admin_cancellation',
             'desc'=> __('Notify the configured admin recipients when a exam booking is cancelled.', 'mc-ems')
         ]);
 
-        add_settings_field('cal_allow_reassign', __('Allow proctor reassignment', 'mc-ems'), [__CLASS__, 'field_checkbox'], self::OPTION_KEY, 'nfems_section_email', [
+        add_settings_field('cal_allow_reassign', __('Allow proctor reassignment', 'mc-ems'), [__CLASS__, 'field_checkbox'], self::OPTION_KEY, 'mcems_section_email', [
             'key' => 'cal_allow_reassign',
             'desc'=> __('Allow replacing the currently assigned proctor from the calendar.', 'mc-ems')
         ]);
 
-        add_settings_field('cal_allow_unassign', __('Allow proctor unassignment', 'mc-ems'), [__CLASS__, 'field_checkbox'], self::OPTION_KEY, 'nfems_section_email', [
+        add_settings_field('cal_allow_unassign', __('Allow proctor unassignment', 'mc-ems'), [__CLASS__, 'field_checkbox'], self::OPTION_KEY, 'mcems_section_email', [
             'key' => 'cal_allow_unassign',
             'desc'=> __('Allow removing the current proctor assignment from the calendar.', 'mc-ems')
         ]);
 
-        add_settings_field('cal_email_on_assign', __('Proctor assignment email', 'mc-ems'), [__CLASS__, 'field_checkbox'], self::OPTION_KEY, 'nfems_section_email', [
+        add_settings_field('cal_email_on_assign', __('Proctor assignment email', 'mc-ems'), [__CLASS__, 'field_checkbox'], self::OPTION_KEY, 'mcems_section_email', [
             'key' => 'cal_email_on_assign',
             'desc'=> __('Send an email when a proctor is assigned to an exam session.', 'mc-ems')
         ]);
 
-        add_settings_field('cal_email_on_unassign', __('Proctor unassignment email', 'mc-ems'), [__CLASS__, 'field_checkbox'], self::OPTION_KEY, 'nfems_section_email', [
+        add_settings_field('cal_email_on_unassign', __('Proctor unassignment email', 'mc-ems'), [__CLASS__, 'field_checkbox'], self::OPTION_KEY, 'mcems_section_email', [
             'key' => 'cal_email_on_unassign',
             'desc'=> __('Send an email when a proctor assignment is removed from an exam session.', 'mc-ems')
         ]);
 
-        add_settings_field('cal_email_on_unassigned_warning', __('24-hour unassigned session warning', 'mc-ems'), [__CLASS__, 'field_checkbox'], self::OPTION_KEY, 'nfems_section_email', [
+        add_settings_field('cal_email_on_unassigned_warning', __('24-hour unassigned session warning', 'mc-ems'), [__CLASS__, 'field_checkbox'], self::OPTION_KEY, 'mcems_section_email', [
             'key' => 'cal_email_on_unassigned_warning',
             'desc'=> __('Send a daily warning email for tomorrow\'s sessions that still have no assigned proctor.', 'mc-ems')
         ]);
 
-        add_settings_field('cal_email_notify_to', __('Calendar email recipients', 'mc-ems'), [__CLASS__, 'field_textarea'], self::OPTION_KEY, 'nfems_section_email', [
+        add_settings_field('cal_email_notify_to', __('Calendar email recipients', 'mc-ems'), [__CLASS__, 'field_textarea'], self::OPTION_KEY, 'mcems_section_email', [
             'key' => 'cal_email_notify_to',
             'placeholder' => __('admin@example.com, exams@example.com', 'mc-ems'),
             'desc' => __('Comma-separated list of recipients for calendar assignment, unassignment and warning emails.', 'mc-ems')
         ]);
 
-        add_settings_field('email_subject_booking_confirmation', __('Exam booking confirmation subject', 'mc-ems'), [__CLASS__, 'field_text'], self::OPTION_KEY, 'nfems_section_email', [
+        add_settings_field('email_subject_booking_confirmation', __('Exam booking confirmation subject', 'mc-ems'), [__CLASS__, 'field_text'], self::OPTION_KEY, 'mcems_section_email', [
             'key' => 'email_subject_booking_confirmation',
             'placeholder' => __('Exam booking confirmed — {course_title}', 'mc-ems'),
             'desc' => __('Placeholders: {site_name}, {candidate_name}, {candidate_email}, {course_title}, {session_date}, {session_time}, {manage_booking_url}, {booking_page_url}, {session_id}', 'mc-ems')
         ]);
 
-        add_settings_field('email_body_booking_confirmation', __('Exam booking confirmation body', 'mc-ems'), [__CLASS__, 'field_textarea'], self::OPTION_KEY, 'nfems_section_email', [
+        add_settings_field('email_body_booking_confirmation', __('Exam booking confirmation body', 'mc-ems'), [__CLASS__, 'field_textarea'], self::OPTION_KEY, 'mcems_section_email', [
             'key' => 'email_body_booking_confirmation',
             'rows' => 8,
             'desc' => __('Plain-text email body. Same placeholders as above.', 'mc-ems')
         ]);
 
-        add_settings_field('email_subject_booking_cancellation', __('Exam booking cancellation subject', 'mc-ems'), [__CLASS__, 'field_text'], self::OPTION_KEY, 'nfems_section_email', [
+        add_settings_field('email_subject_booking_cancellation', __('Exam booking cancellation subject', 'mc-ems'), [__CLASS__, 'field_text'], self::OPTION_KEY, 'mcems_section_email', [
             'key' => 'email_subject_booking_cancellation',
             'placeholder' => __('Exam booking cancelled — {course_title}', 'mc-ems'),
             'desc' => __('Placeholders: {site_name}, {candidate_name}, {candidate_email}, {course_title}, {session_date}, {session_time}, {manage_booking_url}, {booking_page_url}, {session_id}', 'mc-ems')
         ]);
 
-        add_settings_field('email_body_booking_cancellation', __('Exam booking cancellation body', 'mc-ems'), [__CLASS__, 'field_textarea'], self::OPTION_KEY, 'nfems_section_email', [
+        add_settings_field('email_body_booking_cancellation', __('Exam booking cancellation body', 'mc-ems'), [__CLASS__, 'field_textarea'], self::OPTION_KEY, 'mcems_section_email', [
             'key' => 'email_body_booking_cancellation',
             'rows' => 8,
             'desc' => __('Plain-text email body. Same placeholders as above.', 'mc-ems')
         ]);
 
-        add_settings_field('email_subject_admin_booking', __('Admin exam booking subject', 'mc-ems'), [__CLASS__, 'field_text'], self::OPTION_KEY, 'nfems_section_email', [
+        add_settings_field('email_subject_admin_booking', __('Admin exam booking subject', 'mc-ems'), [__CLASS__, 'field_text'], self::OPTION_KEY, 'mcems_section_email', [
             'key' => 'email_subject_admin_booking',
             'placeholder' => __('New exam booking — {course_title}', 'mc-ems'),
             'desc' => __('Placeholders: {site_name}, {candidate_name}, {candidate_email}, {course_title}, {session_date}, {session_time}, {manage_booking_url}, {booking_page_url}, {session_id}', 'mc-ems')
         ]);
 
-        add_settings_field('email_body_admin_booking', __('Admin exam booking body', 'mc-ems'), [__CLASS__, 'field_textarea'], self::OPTION_KEY, 'nfems_section_email', [
+        add_settings_field('email_body_admin_booking', __('Admin exam booking body', 'mc-ems'), [__CLASS__, 'field_textarea'], self::OPTION_KEY, 'mcems_section_email', [
             'key' => 'email_body_admin_booking',
             'rows' => 8,
             'desc' => __('Plain-text email body. Same placeholders as above.', 'mc-ems')
         ]);
 
-        add_settings_field('email_subject_admin_cancellation', __('Admin cancellation subject', 'mc-ems'), [__CLASS__, 'field_text'], self::OPTION_KEY, 'nfems_section_email', [
+        add_settings_field('email_subject_admin_cancellation', __('Admin cancellation subject', 'mc-ems'), [__CLASS__, 'field_text'], self::OPTION_KEY, 'mcems_section_email', [
             'key' => 'email_subject_admin_cancellation',
             'placeholder' => __('Exam booking cancelled — {course_title}', 'mc-ems'),
             'desc' => __('Placeholders: {site_name}, {candidate_name}, {candidate_email}, {course_title}, {session_date}, {session_time}, {manage_booking_url}, {booking_page_url}, {session_id}', 'mc-ems')
         ]);
 
-        add_settings_field('email_body_admin_cancellation', __('Admin cancellation body', 'mc-ems'), [__CLASS__, 'field_textarea'], self::OPTION_KEY, 'nfems_section_email', [
+        add_settings_field('email_body_admin_cancellation', __('Admin cancellation body', 'mc-ems'), [__CLASS__, 'field_textarea'], self::OPTION_KEY, 'mcems_section_email', [
             'key' => 'email_body_admin_cancellation',
             'rows' => 8,
             'desc' => __('Plain-text email body. Same placeholders as above.', 'mc-ems')
         ]);
 
-        add_settings_field('cal_email_subject', __('Proctor assignment subject', 'mc-ems'), [__CLASS__, 'field_text'], self::OPTION_KEY, 'nfems_section_email', [
+        add_settings_field('cal_email_subject', __('Proctor assignment subject', 'mc-ems'), [__CLASS__, 'field_text'], self::OPTION_KEY, 'mcems_section_email', [
             'key' => 'cal_email_subject',
             'placeholder' => __('Exam session assigned — {session_date} {session_time}', 'mc-ems'),
             'desc' => __('Placeholders: {site_name}, {course_title}, {session_date}, {session_time}, {proctor_name}, {session_id}', 'mc-ems')
         ]);
 
-        add_settings_field('cal_email_body', __('Proctor assignment body', 'mc-ems'), [__CLASS__, 'field_textarea'], self::OPTION_KEY, 'nfems_section_email', [
+        add_settings_field('cal_email_body', __('Proctor assignment body', 'mc-ems'), [__CLASS__, 'field_textarea'], self::OPTION_KEY, 'mcems_section_email', [
             'key' => 'cal_email_body',
             'rows' => 8,
             'desc' => __('Plain-text email body. Placeholders: {site_name}, {course_title}, {session_date}, {session_time}, {proctor_name}, {session_id}', 'mc-ems')
         ]);
 
-        add_settings_field('cal_email_subject_unassign', __('Proctor unassignment subject', 'mc-ems'), [__CLASS__, 'field_text'], self::OPTION_KEY, 'nfems_section_email', [
+        add_settings_field('cal_email_subject_unassign', __('Proctor unassignment subject', 'mc-ems'), [__CLASS__, 'field_text'], self::OPTION_KEY, 'mcems_section_email', [
             'key' => 'cal_email_subject_unassign',
             'placeholder' => __('Exam session unassigned — {session_date} {session_time}', 'mc-ems'),
             'desc' => __('Placeholders: {site_name}, {course_title}, {session_date}, {session_time}, {proctor_name}, {session_id}', 'mc-ems')
         ]);
 
-        add_settings_field('cal_email_body_unassign', __('Proctor unassignment body', 'mc-ems'), [__CLASS__, 'field_textarea'], self::OPTION_KEY, 'nfems_section_email', [
+        add_settings_field('cal_email_body_unassign', __('Proctor unassignment body', 'mc-ems'), [__CLASS__, 'field_textarea'], self::OPTION_KEY, 'mcems_section_email', [
             'key' => 'cal_email_body_unassign',
             'rows' => 8,
             'desc' => __('Plain-text email body. Placeholders: {site_name}, {course_title}, {session_date}, {session_time}, {proctor_name}, {session_id}', 'mc-ems')
         ]);
 
-        add_settings_field('cal_email_subject_warning', __('Unassigned session warning subject', 'mc-ems'), [__CLASS__, 'field_text'], self::OPTION_KEY, 'nfems_section_email', [
+        add_settings_field('cal_email_subject_warning', __('Unassigned session warning subject', 'mc-ems'), [__CLASS__, 'field_text'], self::OPTION_KEY, 'mcems_section_email', [
             'key' => 'cal_email_subject_warning',
             'placeholder' => __('Unassigned exam session reminder — {session_date} {session_time}', 'mc-ems'),
             'desc' => __('Placeholders: {site_name}, {course_title}, {session_date}, {session_time}, {session_id}', 'mc-ems')
         ]);
 
-        add_settings_field('cal_email_body_warning', __('Unassigned session warning body', 'mc-ems'), [__CLASS__, 'field_textarea'], self::OPTION_KEY, 'nfems_section_email', [
+        add_settings_field('cal_email_body_warning', __('Unassigned session warning body', 'mc-ems'), [__CLASS__, 'field_textarea'], self::OPTION_KEY, 'mcems_section_email', [
             'key' => 'cal_email_body_warning',
             'rows' => 8,
             'desc' => __('Plain-text email body. Placeholders: {site_name}, {course_title}, {session_date}, {session_time}, {session_id}', 'mc-ems')
         ]);
 
-        add_settings_section('nfems_section_pages', __('Pages', 'mc-ems'), function () {
+        add_settings_section('mcems_section_pages', __('Pages', 'mc-ems'), function () {
             echo '<p class="description">Select the pages used by MC-EMS for front-end navigation.</p>';
         }, self::OPTION_KEY);
 
-        add_settings_field('booking_page_id', __('Exam booking page (calendar)', 'mc-ems'), [__CLASS__, 'field_page_dropdown_clear'], self::OPTION_KEY, 'nfems_section_pages', [
+        add_settings_field('booking_page_id', __('Exam booking page (calendar)', 'mc-ems'), [__CLASS__, 'field_page_dropdown_clear'], self::OPTION_KEY, 'mcems_section_pages', [
             'key'  => 'booking_page_id',
             'desc' => __('Choose the page where you placed the [mcems_book_exam] shortcode. The plugin will use this to generate dynamic links to the exam booking calendar.', 'mc-ems'),
         ]);
 
-        add_settings_field('manage_booking_page_id', __('Manage exam booking page', 'mc-ems'), [__CLASS__, 'field_page_dropdown_clear'], self::OPTION_KEY, 'nfems_section_pages', [
+        add_settings_field('manage_booking_page_id', __('Manage exam booking page', 'mc-ems'), [__CLASS__, 'field_page_dropdown_clear'], self::OPTION_KEY, 'mcems_section_pages', [
             'key'  => 'manage_booking_page_id',
             'desc' => __('Choose the page where you placed the [mcems_manage_booking] shortcode. The plugin will use this to generate dynamic links to the “Manage exam booking” page.', 'mc-ems'),
         ]);
@@ -471,7 +471,7 @@ class NFEMS_Settings {
 
     public static function sanitize($input): array {
         $out = self::get();
-        $tab = isset($_POST['nfems_current_tab']) ? sanitize_key((string) $_POST['nfems_current_tab']) : '';
+        $tab = isset($_POST['mcems_current_tab']) ? sanitize_key((string) $_POST['mcems_current_tab']) : '';
 
         if (array_key_exists('tutor_gate_enabled', $input)) {
             $out['tutor_gate_enabled'] = !empty($input['tutor_gate_enabled']) ? 1 : 0;
@@ -499,8 +499,8 @@ class NFEMS_Settings {
                 if ($id > 0) $clean[] = $id;
             }
             $clean = array_values(array_unique($clean));
-            if (class_exists('NFEMS_Tutor') && method_exists('NFEMS_Tutor', 'get_courses')) {
-                $valid = array_map('intval', array_keys(NFEMS_Tutor::get_courses()));
+            if (class_exists('MCEMS_Tutor') && method_exists('MCEMS_Tutor', 'get_courses')) {
+                $valid = array_map('intval', array_keys(MCEMS_Tutor::get_courses()));
                 $clean = array_values(array_intersect($clean, $valid));
             }
             $out['tutor_gate_course_ids'] = $clean;
@@ -663,7 +663,7 @@ class NFEMS_Settings {
 
         echo '<h2 class="nav-tab-wrapper" style="margin-top:12px;">';
         foreach ($tabs as $key => $label) {
-            $url = esc_url(add_query_arg(['page' => 'nfems-settings-cpt', 'tab' => $key], admin_url('edit.php?post_type=' . NFEMS_CPT_Sessioni_Esame::CPT)));
+            $url = esc_url(add_query_arg(['page' => 'mcems-settings-cpt', 'tab' => $key], admin_url('edit.php?post_type=' . MCEMS_CPT_Sessioni_Esame::CPT)));
             $cls = ($tab === $key) ? 'nav-tab nav-tab-active' : 'nav-tab';
             echo '<a class="' . esc_attr($cls) . '" href="' . $url . '">' . esc_html($label) . '</a>';
         }
@@ -688,16 +688,16 @@ class NFEMS_Settings {
 
         echo '<form method="post" action="options.php">';
         settings_fields(self::OPTION_KEY);
-        echo '<input type="hidden" name="nfems_current_tab" value="' . esc_attr($tab) . '">';
+        echo '<input type="hidden" name="mcems_current_tab" value="' . esc_attr($tab) . '">';
 
         if ($tab === 'bookings') {
-            self::render_only_sections(['nfems_section_main']);
+            self::render_only_sections(['mcems_section_main']);
         } elseif ($tab === 'course_access') {
-            self::render_only_sections(['nfems_section_gate']);
+            self::render_only_sections(['mcems_section_gate']);
         } elseif ($tab === 'email') {
-            self::render_only_sections(['nfems_section_email']);
+            self::render_only_sections(['mcems_section_email']);
         } elseif ($tab === 'pages') {
-            self::render_only_sections(['nfems_section_pages']);
+            self::render_only_sections(['mcems_section_pages']);
         }
 
         submit_button();
@@ -714,12 +714,12 @@ class NFEMS_Settings {
         $sel  = array_values(array_unique(array_filter($sel)));
 
         $courses = [];
-        if (class_exists('NFEMS_Tutor') && method_exists('NFEMS_Tutor', 'get_courses')) {
-            $courses = NFEMS_Tutor::get_courses();
+        if (class_exists('MCEMS_Tutor') && method_exists('MCEMS_Tutor', 'get_courses')) {
+            $courses = MCEMS_Tutor::get_courses();
         }
 
-        $id_filter = 'nfems_course_filter_' . $key;
-        $id_select = 'nfems_course_select_' . $key;
+        $id_filter = 'mcems_course_filter_' . $key;
+        $id_select = 'mcems_course_select_' . $key;
 
         echo '<div style="max-width:560px">';
         echo '<input type="text" id="'.esc_attr($id_filter).'" placeholder="Search course…" style="width:100%;max-width:520px;padding:8px 10px;border-radius:10px;border:1px solid #d0d5dd;margin-bottom:8px;">';

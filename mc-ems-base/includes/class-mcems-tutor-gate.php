@@ -2,35 +2,35 @@
 if (!defined('ABSPATH')) exit;
 
 /**
- * NF-EMS Tutor LMS time lock (HARD BLOCK - template_redirect)
+ * MC-EMS Tutor LMS time lock (HARD BLOCK - template_redirect)
  *
  * Why: many Tutor/Elementor templates do not use `the_content` in a standard way,
  * so filtering `the_content` may not affect the visible page. This version blocks
  * at routing level and renders a locked page (theme-friendly) before anything else.
  *
  * Data source:
- * - user_meta: nfems_active_bookings[course_id]['slot_id']
- * - session post meta: NFEMS_CPT_Sessioni_Esame::MK_DATE + MK_TIME
+ * - user_meta: mcems_active_bookings[course_id]['slot_id']
+ * - session post meta: MCEMS_CPT_Sessioni_Esame::MK_DATE + MK_TIME
  */
-class NFEMS_Tutor_Gate {
+class MCEMS_Tutor_Gate {
 
     public static function init(): void {
         add_action('template_redirect', [__CLASS__, 'maybe_block_course_page'], 0);
     }
 
     private static function enabled(): bool {
-        if (class_exists('NFEMS_Settings')) {
+        if (class_exists('MCEMS_Settings')) {
 
-            if (method_exists('NFEMS_Settings', 'get_int')) {
-                $v = NFEMS_Settings::get_int('tutor_gate_enabled');
+            if (method_exists('MCEMS_Settings', 'get_int')) {
+                $v = MCEMS_Settings::get_int('tutor_gate_enabled');
 
                 if ($v !== null && $v !== '') {
                     return (int) $v === 1;
                 }
             }
 
-            if (method_exists('NFEMS_Settings', 'get')) {
-                $o = (array) NFEMS_Settings::get();
+            if (method_exists('MCEMS_Settings', 'get')) {
+                $o = (array) MCEMS_Settings::get();
 
                 if (array_key_exists('tutor_gate_enabled', $o)) {
                     return (int) $o['tutor_gate_enabled'] === 1;
@@ -42,20 +42,20 @@ class NFEMS_Tutor_Gate {
     }
 
     private static function unlock_lead_minutes(): int {
-        if (class_exists('NFEMS_Settings') && method_exists('NFEMS_Settings', 'get_int')) {
-            return max(0, (int) NFEMS_Settings::get_int('tutor_gate_unlock_lead_minutes'));
+        if (class_exists('MCEMS_Settings') && method_exists('MCEMS_Settings', 'get_int')) {
+            return max(0, (int) MCEMS_Settings::get_int('tutor_gate_unlock_lead_minutes'));
         }
         return 0;
     }
 
     private static function booking_expiry_seconds(): int {
-        if (class_exists('NFEMS_Settings') && method_exists('NFEMS_Settings', 'get_int')) {
-            $v = max(0, (int) NFEMS_Settings::get_int('tutor_gate_booking_expiry_value'));
+        if (class_exists('MCEMS_Settings') && method_exists('MCEMS_Settings', 'get_int')) {
+            $v = max(0, (int) MCEMS_Settings::get_int('tutor_gate_booking_expiry_value'));
             if ($v <= 0) return 0;
 
             $u = 'hours';
-            if (method_exists('NFEMS_Settings', 'get_str')) {
-                $u = (string) NFEMS_Settings::get_str('tutor_gate_booking_expiry_unit');
+            if (method_exists('MCEMS_Settings', 'get_str')) {
+                $u = (string) MCEMS_Settings::get_str('tutor_gate_booking_expiry_unit');
             }
 
             return ($u === 'minutes') ? ($v * 60) : ($v * 3600);
@@ -73,8 +73,8 @@ class NFEMS_Tutor_Gate {
     private static function course_post_types(): array {
         $pts = ['courses', 'tutor_course'];
 
-        if (class_exists('NFEMS_Tutor') && method_exists('NFEMS_Tutor', 'course_post_type')) {
-            $pt = (string) NFEMS_Tutor::course_post_type();
+        if (class_exists('MCEMS_Tutor') && method_exists('MCEMS_Tutor', 'course_post_type')) {
+            $pt = (string) MCEMS_Tutor::course_post_type();
             if ($pt && !in_array($pt, $pts, true)) {
                 $pts[] = $pt;
             }
@@ -109,14 +109,14 @@ class NFEMS_Tutor_Gate {
     }
 
     private static function get_active_slot_id(int $user_id, int $course_id): int {
-        $map = get_user_meta($user_id, 'nfems_active_bookings', true);
+        $map = get_user_meta($user_id, 'mcems_active_bookings', true);
         $map = is_array($map) ? $map : [];
 
         $slot_id = (int) ($map[$course_id]['slot_id'] ?? 0);
 
         // backward compatibility: legacy single booking
         if ($slot_id <= 0) {
-            $legacy = get_user_meta($user_id, 'nfems_active_booking', true);
+            $legacy = get_user_meta($user_id, 'mcems_active_booking', true);
             if (is_array($legacy)) {
                 $legacy_course_id = (int) ($legacy['course_id'] ?? 0);
                 $legacy_slot_id   = (int) ($legacy['slot_id'] ?? 0);
@@ -127,13 +127,13 @@ class NFEMS_Tutor_Gate {
             }
         }
 
-        $cpt = class_exists('NFEMS_CPT_Sessioni_Esame')
-            ? NFEMS_CPT_Sessioni_Esame::CPT
+        $cpt = class_exists('MCEMS_CPT_Sessioni_Esame')
+            ? MCEMS_CPT_Sessioni_Esame::CPT
             : 'slot_esame';
 
         if ($slot_id > 0 && get_post_type($slot_id) !== $cpt) {
             unset($map[$course_id]);
-            update_user_meta($user_id, 'nfems_active_bookings', $map);
+            update_user_meta($user_id, 'mcems_active_bookings', $map);
             return 0;
         }
 
@@ -146,9 +146,9 @@ class NFEMS_Tutor_Gate {
         $date = '';
         $time = '';
 
-        if (class_exists('NFEMS_CPT_Sessioni_Esame')) {
-            $date = (string) get_post_meta($slot_id, NFEMS_CPT_Sessioni_Esame::MK_DATE, true);
-            $time = (string) get_post_meta($slot_id, NFEMS_CPT_Sessioni_Esame::MK_TIME, true);
+        if (class_exists('MCEMS_CPT_Sessioni_Esame')) {
+            $date = (string) get_post_meta($slot_id, MCEMS_CPT_Sessioni_Esame::MK_DATE, true);
+            $time = (string) get_post_meta($slot_id, MCEMS_CPT_Sessioni_Esame::MK_TIME, true);
         } else {
             $date = (string) get_post_meta($slot_id, 'data_sessione', true);
             $time = (string) get_post_meta($slot_id, 'orario_sessione', true);
@@ -189,7 +189,7 @@ class NFEMS_Tutor_Gate {
 
         get_header();
 
-        echo '<div class="nfems-locked-course" style="max-width:820px;margin:28px auto;padding:18px;border-radius:16px;border:1px solid #fda29b;background:#fffbfa;box-shadow:0 10px 30px rgba(16,24,40,.08);">';
+        echo '<div class="mcems-locked-course" style="max-width:820px;margin:28px auto;padding:18px;border-radius:16px;border:1px solid #fda29b;background:#fffbfa;box-shadow:0 10px 30px rgba(16,24,40,.08);">';
         echo '<div style="font-weight:900;color:#b42318;font-size:18px;margin-bottom:8px;">' . esc_html($title) . '</div>';
         echo '<div style="color:#7a271a;font-weight:800;font-size:14px;line-height:1.5;">' . $body_html . '</div>';
         echo '</div>';
@@ -201,8 +201,8 @@ class NFEMS_Tutor_Gate {
     private static function get_manage_booking_url(): string {
         $mb = '';
 
-        if (class_exists('NFEMS_Settings') && method_exists('NFEMS_Settings', 'get_manage_booking_page_url')) {
-            $mb = (string) NFEMS_Settings::get_manage_booking_page_url();
+        if (class_exists('MCEMS_Settings') && method_exists('MCEMS_Settings', 'get_manage_booking_page_url')) {
+            $mb = (string) MCEMS_Settings::get_manage_booking_page_url();
         }
 
         return $mb;
@@ -211,11 +211,11 @@ class NFEMS_Tutor_Gate {
     private static function get_gate_course_ids(): array {
         $gate_courses = [];
 
-        if (class_exists('NFEMS_Settings') && method_exists('NFEMS_Settings', 'get_gate_course_ids')) {
-            $gate_courses = (array) NFEMS_Settings::get_gate_course_ids();
+        if (class_exists('MCEMS_Settings') && method_exists('MCEMS_Settings', 'get_gate_course_ids')) {
+            $gate_courses = (array) MCEMS_Settings::get_gate_course_ids();
         } else {
-            if (class_exists('NFEMS_Settings') && method_exists('NFEMS_Settings', 'get')) {
-                $o = (array) NFEMS_Settings::get();
+            if (class_exists('MCEMS_Settings') && method_exists('MCEMS_Settings', 'get')) {
+                $o = (array) MCEMS_Settings::get();
                 $gate_courses = is_array($o['tutor_gate_course_ids'] ?? null) ? $o['tutor_gate_course_ids'] : [];
             }
         }
@@ -254,7 +254,7 @@ class NFEMS_Tutor_Gate {
 
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log(
-                '[NFEMS Tutor Gate] enabled=' . (self::enabled() ? '1' : '0') .
+                '[MCEMS Tutor Gate] enabled=' . (self::enabled() ? '1' : '0') .
                 ' course_id=' . $course_id .
                 ' user_id=' . $user_id .
                 ' slot_id=' . $slot_id .
@@ -293,12 +293,12 @@ class NFEMS_Tutor_Gate {
             $expiry_ts = $session_ts + $expiry;
 
             if ($now_ts > $expiry_ts) {
-                $map = get_user_meta($user_id, 'nfems_active_bookings', true);
+                $map = get_user_meta($user_id, 'mcems_active_bookings', true);
                 $map = is_array($map) ? $map : [];
 
                 if (isset($map[$course_id])) {
                     unset($map[$course_id]);
-                    update_user_meta($user_id, 'nfems_active_bookings', $map);
+                    update_user_meta($user_id, 'mcems_active_bookings', $map);
                 }
 
                 $body = esc_html__('Your exam booking has expired and is no longer valid to access this course. Please book a new exam session.', 'mc-ems');
@@ -332,4 +332,4 @@ class NFEMS_Tutor_Gate {
     }
 }
 
-NFEMS_Tutor_Gate::init();
+MCEMS_Tutor_Gate::init();

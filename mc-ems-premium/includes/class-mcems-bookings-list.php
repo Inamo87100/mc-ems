@@ -1,7 +1,7 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-class NFEMS_Bookings_List {
+class MCEMS_Bookings_List {
 
     public static function init(): void {
         add_shortcode('mcems_bookings_list', [__CLASS__, 'shortcode']);
@@ -9,7 +9,7 @@ class NFEMS_Bookings_List {
 }
 
     public static function maybe_export_csv(): void {
-        if (!isset($_GET['nfems_export']) || sanitize_text_field($_GET['nfems_export']) !== 'csv') {
+        if (!isset($_GET['mcems_export']) || sanitize_text_field($_GET['mcems_export']) !== 'csv') {
             return;
         }
 
@@ -18,10 +18,10 @@ class NFEMS_Bookings_List {
             exit;
         }
 
-        $selected_date   = isset($_GET['nfems_date']) ? sanitize_text_field($_GET['nfems_date']) : '';
-        $date_from       = isset($_GET['nfems_from']) ? sanitize_text_field($_GET['nfems_from']) : '';
-        $date_to         = isset($_GET['nfems_to']) ? sanitize_text_field($_GET['nfems_to']) : '';$selected_course = isset($_GET['nfems_course']) ? (int) $_GET['nfems_course'] : 0;
-        $advanced       = isset($_GET['nfems_adv']) && (string)$_GET['nfems_adv'] === '1';
+        $selected_date   = isset($_GET['mcems_date']) ? sanitize_text_field($_GET['mcems_date']) : '';
+        $date_from       = isset($_GET['mcems_from']) ? sanitize_text_field($_GET['mcems_from']) : '';
+        $date_to         = isset($_GET['mcems_to']) ? sanitize_text_field($_GET['mcems_to']) : '';$selected_course = isset($_GET['mcems_course']) ? (int) $_GET['mcems_course'] : 0;
+        $advanced       = isset($_GET['mcems_adv']) && (string)$_GET['mcems_adv'] === '1';
 
         $filter = self::normalize_date_filter($selected_date, $date_from, $date_to, $advanced);
         if (!$filter) {
@@ -39,8 +39,8 @@ class NFEMS_Bookings_List {
 
         if ($selected_course > 0) {
             $course_title = '';
-            if (class_exists('NFEMS_Tutor')) {
-                $course_title = (string) NFEMS_Tutor::course_title($selected_course);
+            if (class_exists('MCEMS_Tutor')) {
+                $course_title = (string) MCEMS_Tutor::course_title($selected_course);
             }
             if (!$course_title) {
                 $course_title = (string) get_the_title($selected_course);
@@ -68,8 +68,8 @@ class NFEMS_Bookings_List {
             $data_h = '';
             if (!empty($r['data'])) $data_h = date_i18n('d/m/Y', strtotime($r['data']));
             $corso_t = '';
-            if (!empty($r['corso']) && class_exists('NFEMS_Tutor')) {
-                $corso_t = NFEMS_Tutor::course_title((int) $r['corso']);
+            if (!empty($r['corso']) && class_exists('MCEMS_Tutor')) {
+                $corso_t = MCEMS_Tutor::course_title((int) $r['corso']);
             }
             $spec = !empty($r['special']) ? 'Yes' : 'No';
 
@@ -91,7 +91,7 @@ class NFEMS_Bookings_List {
 
 
     private static function can_view(): bool {
-        $cap = NFEMS_Settings::get_str('cap_view_bookings');
+        $cap = MCEMS_Settings::get_str('cap_view_bookings');
         if (!$cap) $cap = 'manage_options';
         return current_user_can($cap) || current_user_can('manage_options');
     }
@@ -144,13 +144,13 @@ class NFEMS_Bookings_List {
         $meta = [];
         if (($filter['type'] ?? '') === 'single' && !empty($filter['date'])) {
             $meta[] = [
-                'key'     => NFEMS_CPT_Sessioni_Esame::MK_DATE,
+                'key'     => MCEMS_CPT_Sessioni_Esame::MK_DATE,
                 'value'   => (string) $filter['date'],
                 'compare' => '=',
             ];
         } elseif (($filter['type'] ?? '') === 'range' && !empty($filter['from']) && !empty($filter['to'])) {
             $meta[] = [
-                'key'     => NFEMS_CPT_Sessioni_Esame::MK_DATE,
+                'key'     => MCEMS_CPT_Sessioni_Esame::MK_DATE,
                 'value'   => [(string) $filter['from'], (string) $filter['to']],
                 'compare' => 'BETWEEN',
                 'type'    => 'DATE',
@@ -158,36 +158,36 @@ class NFEMS_Bookings_List {
         }
         if ($selected_course > 0) {
             $meta[] = [
-                'key'     => NFEMS_CPT_Sessioni_Esame::MK_COURSE_ID,
+                'key'     => MCEMS_CPT_Sessioni_Esame::MK_COURSE_ID,
                 'value'   => $selected_course,
                 'compare' => '=',
             ];
         }
 
         $session_ids = get_posts([
-            'post_type'      => NFEMS_CPT_Sessioni_Esame::CPT,
+            'post_type'      => MCEMS_CPT_Sessioni_Esame::CPT,
             'post_status'    => 'publish',
             'posts_per_page' => -1,
             'fields'         => 'ids',
             'meta_query'     => $meta,
             'orderby'        => 'meta_value',
-            'meta_key'       => NFEMS_CPT_Sessioni_Esame::MK_TIME,
+            'meta_key'       => MCEMS_CPT_Sessioni_Esame::MK_TIME,
             'order'          => 'ASC',
         ]);
 
         $rows = [];
         foreach ($session_ids as $sid) {
             $sid = (int) $sid;
-            $date = (string) get_post_meta($sid, NFEMS_CPT_Sessioni_Esame::MK_DATE, true);
-            $time = (string) get_post_meta($sid, NFEMS_CPT_Sessioni_Esame::MK_TIME, true);
-            $course_id = (int) get_post_meta($sid, NFEMS_CPT_Sessioni_Esame::MK_COURSE_ID, true);
+            $date = (string) get_post_meta($sid, MCEMS_CPT_Sessioni_Esame::MK_DATE, true);
+            $time = (string) get_post_meta($sid, MCEMS_CPT_Sessioni_Esame::MK_TIME, true);
+            $course_id = (int) get_post_meta($sid, MCEMS_CPT_Sessioni_Esame::MK_COURSE_ID, true);
 
-            $occ = get_post_meta($sid, NFEMS_CPT_Sessioni_Esame::MK_OCCUPATI, true);
+            $occ = get_post_meta($sid, MCEMS_CPT_Sessioni_Esame::MK_OCCUPATI, true);
             if (!is_array($occ) || empty($occ)) continue;
 
-            $is_special = ((int) get_post_meta($sid, NFEMS_CPT_Sessioni_Esame::MK_IS_SPECIAL, true) === 1);
+            $is_special = ((int) get_post_meta($sid, MCEMS_CPT_Sessioni_Esame::MK_IS_SPECIAL, true) === 1);
 
-            $proctor_id = (int) get_post_meta($sid, NFEMS_CPT_Sessioni_Esame::MK_PROCTOR_USER_ID, true);
+            $proctor_id = (int) get_post_meta($sid, MCEMS_CPT_Sessioni_Esame::MK_PROCTOR_USER_ID, true);
             $proctor = $proctor_id ? get_user_by('id', $proctor_id) : null;
             $proctor_label = $proctor ? $proctor->display_name : '—';
 
@@ -228,56 +228,56 @@ class NFEMS_Bookings_List {
         if (!is_user_logged_in()) return '<p>You must be logged in.</p>';
         if (!self::can_view()) return '<p>Insufficient permissions.</p>';
 
-        $courses = NFEMS_Tutor::get_courses();
-        $course_pt = NFEMS_Tutor::course_post_type();
+        $courses = MCEMS_Tutor::get_courses();
+        $course_pt = MCEMS_Tutor::course_post_type();
 
-        $selected_date = isset($_GET['nfems_date']) ? sanitize_text_field($_GET['nfems_date']) : '';
-        $date_from     = isset($_GET['nfems_from']) ? sanitize_text_field($_GET['nfems_from']) : '';
-        $date_to       = isset($_GET['nfems_to']) ? sanitize_text_field($_GET['nfems_to']) : '';$selected_course = isset($_GET['nfems_course']) ? (int) $_GET['nfems_course'] : 0;
-        $advanced       = isset($_GET['nfems_adv']) && (string)$_GET['nfems_adv'] === '1';
+        $selected_date = isset($_GET['mcems_date']) ? sanitize_text_field($_GET['mcems_date']) : '';
+        $date_from     = isset($_GET['mcems_from']) ? sanitize_text_field($_GET['mcems_from']) : '';
+        $date_to       = isset($_GET['mcems_to']) ? sanitize_text_field($_GET['mcems_to']) : '';$selected_course = isset($_GET['mcems_course']) ? (int) $_GET['mcems_course'] : 0;
+        $advanced       = isset($_GET['mcems_adv']) && (string)$_GET['mcems_adv'] === '1';
 
         $filter = self::normalize_date_filter($selected_date, $date_from, $date_to, $advanced);
         $has_filter = (bool) $filter;
 ob_start();
         ?>
         <style>
-            .nfems-adminwrap{max-width:1200px;margin:0 auto;}
-            .nfems-panel{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px;box-shadow:0 1px 2px rgba(16,24,40,.06);}
-            .nfems-title{margin:0 0 6px;font-size:1.2rem;font-weight:900;}
-            .nfems-desc{margin:0 0 14px;color:#667085;}
-            .nfems-filters{display:flex;flex-wrap:wrap;gap:10px;align-items:end;}
-            .nfems-field{display:flex;flex-direction:column;gap:6px;}
-            .nfems-field label{font-size:12px;font-weight:800;color:#344054;}
-            .nfems-field input,.nfems-field select{min-width:240px;padding:9px 10px;border-radius:12px;border:1px solid #d0d5dd;background:#fff;}
-            .nfems-actions{display:flex;gap:10px;align-items:center;}
-            .nfems-btn{appearance:none;border:1px solid #d0d5dd;background:#101828;color:#fff;border-radius:12px;padding:10px 14px;font-weight:900;cursor:pointer;}
-            .nfems-btn:hover{filter:brightness(1.05);}
-            .nfems-link{font-weight:800;color:#344054;text-decoration:none;border:1px solid #d0d5dd;border-radius:12px;padding:10px 14px;background:#fff;}
-            .nfems-link:hover{background:#f9fafb;}
-            .nfems-hint{margin-top:10px;color:#667085;font-size:12px;}
-            .nfems-tablewrap{margin-top:14px;overflow:auto;}
-            table.nfems-table{min-width:1100px;border-collapse:separate;border-spacing:0;overflow:hidden;border:1px solid #e5e7eb;border-radius:14px;}
-            table.nfems-table thead th{background:#f9fafb;color:#344054;font-weight:900;font-size:12px;text-transform:uppercase;letter-spacing:.02em;padding:10px;border-bottom:1px solid #e5e7eb;}
-            table.nfems-table tbody td{padding:10px;border-bottom:1px solid #f2f4f7;vertical-align:top;}
-            table.nfems-table tbody tr:hover td{background:#fcfcfd;}
-            .nfems-empty{margin-top:12px;padding:12px;border:1px dashed #d0d5dd;border-radius:14px;color:#667085;background:#fcfcfd;}
-            .nfems-pill{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:#f2f4f7;color:#344054;font-size:12px;font-weight:800;}
+            .mcems-adminwrap{max-width:1200px;margin:0 auto;}
+            .mcems-panel{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px;box-shadow:0 1px 2px rgba(16,24,40,.06);}
+            .mcems-title{margin:0 0 6px;font-size:1.2rem;font-weight:900;}
+            .mcems-desc{margin:0 0 14px;color:#667085;}
+            .mcems-filters{display:flex;flex-wrap:wrap;gap:10px;align-items:end;}
+            .mcems-field{display:flex;flex-direction:column;gap:6px;}
+            .mcems-field label{font-size:12px;font-weight:800;color:#344054;}
+            .mcems-field input,.mcems-field select{min-width:240px;padding:9px 10px;border-radius:12px;border:1px solid #d0d5dd;background:#fff;}
+            .mcems-actions{display:flex;gap:10px;align-items:center;}
+            .mcems-btn{appearance:none;border:1px solid #d0d5dd;background:#101828;color:#fff;border-radius:12px;padding:10px 14px;font-weight:900;cursor:pointer;}
+            .mcems-btn:hover{filter:brightness(1.05);}
+            .mcems-link{font-weight:800;color:#344054;text-decoration:none;border:1px solid #d0d5dd;border-radius:12px;padding:10px 14px;background:#fff;}
+            .mcems-link:hover{background:#f9fafb;}
+            .mcems-hint{margin-top:10px;color:#667085;font-size:12px;}
+            .mcems-tablewrap{margin-top:14px;overflow:auto;}
+            table.mcems-table{min-width:1100px;border-collapse:separate;border-spacing:0;overflow:hidden;border:1px solid #e5e7eb;border-radius:14px;}
+            table.mcems-table thead th{background:#f9fafb;color:#344054;font-weight:900;font-size:12px;text-transform:uppercase;letter-spacing:.02em;padding:10px;border-bottom:1px solid #e5e7eb;}
+            table.mcems-table tbody td{padding:10px;border-bottom:1px solid #f2f4f7;vertical-align:top;}
+            table.mcems-table tbody tr:hover td{background:#fcfcfd;}
+            .mcems-empty{margin-top:12px;padding:12px;border:1px dashed #d0d5dd;border-radius:14px;color:#667085;background:#fcfcfd;}
+            .mcems-pill{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:#f2f4f7;color:#344054;font-size:12px;font-weight:800;}
         </style>
 
-        <div class="nfems-adminwrap">
-            <div class="nfems-panel">
-                <h3 class="nfems-title"><?php echo esc_html('Exam exam bookings list'); ?></h3>
-                <p class="nfems-desc"><?php echo sprintf(esc_html('Filter by %1$sdate%2$s (single day or date range). You can also filter by course.'), '<strong>', '</strong>'); ?></p>
+        <div class="mcems-adminwrap">
+            <div class="mcems-panel">
+                <h3 class="mcems-title"><?php echo esc_html('Exam exam bookings list'); ?></h3>
+                <p class="mcems-desc"><?php echo sprintf(esc_html('Filter by %1$sdate%2$s (single day or date range). You can also filter by course.'), '<strong>', '</strong>'); ?></p>
 
-<div class="nfems-search-toggle" style="margin:8px 0 14px 0;">
-    <button type="button" id="nfems_adv_btn" class="nfems-btn" aria-pressed="false">
+<div class="mcems-search-toggle" style="margin:8px 0 14px 0;">
+    <button type="button" id="mcems_adv_btn" class="mcems-btn" aria-pressed="false">
         Advanced search
     </button>
 </div>
 
 
-                <form method="get" class="nfems-filters">
-                    <input type="hidden" name="post_type" value="<?php echo esc_attr(NFEMS_CPT_Sessioni_Esame::CPT); ?>">
+                <form method="get" class="mcems-filters">
+                    <input type="hidden" name="post_type" value="<?php echo esc_attr(MCEMS_CPT_Sessioni_Esame::CPT); ?>">
                     <?php
                     // Preserve "page" if inside admin, but shortcode may be used anywhere.
                     if (isset($_GET['page'])) {
@@ -286,17 +286,17 @@ ob_start();
                     ?>
 
                     
-<input type="hidden" id="nfems_adv" name="nfems_adv" value="<?php echo $advanced ? '1' : '0'; ?>">
-<div class="nfems-basic-filters" style="display:flex; gap:12px; flex-wrap:wrap;">
-<div class="nfems-field">
-                        <label for="nfems_date"><?php echo esc_html('Date'); ?></label>
-                        <input type="date" id="nfems_date" name="nfems_date" value="<?php echo esc_attr($selected_date); ?>">
+<input type="hidden" id="mcems_adv" name="mcems_adv" value="<?php echo $advanced ? '1' : '0'; ?>">
+<div class="mcems-basic-filters" style="display:flex; gap:12px; flex-wrap:wrap;">
+<div class="mcems-field">
+                        <label for="mcems_date"><?php echo esc_html('Date'); ?></label>
+                        <input type="date" id="mcems_date" name="mcems_date" value="<?php echo esc_attr($selected_date); ?>">
                     </div>
 
                     
-<div class="nfems-field">
-                        <label for="nfems_course"><?php echo esc_html('Course'); ?></label>
-                        <select id="nfems_course" name="nfems_course">
+<div class="mcems-field">
+                        <label for="mcems_course"><?php echo esc_html('Course'); ?></label>
+                        <select id="mcems_course" name="mcems_course">
                             <option value="0"><?php echo esc_html('All courses'); ?></option>
                             <?php if ($course_pt && $courses): foreach ($courses as $cid => $title): ?>
                                 <option value="<?php echo (int)$cid; ?>" <?php selected($selected_course, (int)$cid); ?>>
@@ -308,20 +308,20 @@ ob_start();
 
 
 </div>
-<div class="nfems-advanced-filters" style="display:flex; gap:12px; flex-wrap:wrap; margin-top:10px;">
-<div class="nfems-field">
-                        <label for="nfems_from"><?php echo esc_html('From'); ?></label>
-                        <input type="date" id="nfems_from" name="nfems_from" value="<?php echo esc_attr($date_from); ?>">
+<div class="mcems-advanced-filters" style="display:flex; gap:12px; flex-wrap:wrap; margin-top:10px;">
+<div class="mcems-field">
+                        <label for="mcems_from"><?php echo esc_html('From'); ?></label>
+                        <input type="date" id="mcems_from" name="mcems_from" value="<?php echo esc_attr($date_from); ?>">
                     </div>
 
                     
-<div class="nfems-field">
-                        <label for="nfems_to"><?php echo esc_html('To'); ?></label>
-                        <input type="date" id="nfems_to" name="nfems_to" value="<?php echo esc_attr($date_to); ?>">
+<div class="mcems-field">
+                        <label for="mcems_to"><?php echo esc_html('To'); ?></label>
+                        <input type="date" id="mcems_to" name="mcems_to" value="<?php echo esc_attr($date_to); ?>">
                     </div>
-<div class="nfems-field">
-                        <label for="nfems_course"><?php echo esc_html('Course'); ?></label>
-                        <select id="nfems_course" name="nfems_course">
+<div class="mcems-field">
+                        <label for="mcems_course"><?php echo esc_html('Course'); ?></label>
+                        <select id="mcems_course" name="mcems_course">
                             <option value="0"><?php echo esc_html('All courses'); ?></option>
                             <?php if ($course_pt && $courses): foreach ($courses as $cid => $title): ?>
                                 <option value="<?php echo (int)$cid; ?>" <?php selected($selected_course, (int)$cid); ?>>
@@ -333,19 +333,19 @@ ob_start();
 
                     
 </div>
-<div class="nfems-actions">
-                        <button class="nfems-btn" type="submit"><?php echo esc_html('Filter'); ?></button>
-                        <a class="nfems-link" href="<?php echo esc_url(remove_query_arg(['nfems_date','nfems_from','nfems_to','nfems_course'])); ?>">Reset</a>
+<div class="mcems-actions">
+                        <button class="mcems-btn" type="submit"><?php echo esc_html('Filter'); ?></button>
+                        <a class="mcems-link" href="<?php echo esc_url(remove_query_arg(['mcems_date','mcems_from','mcems_to','mcems_course'])); ?>">Reset</a>
                     <?php if ($has_filter): ?>
-                        <button class="nfems-btn" type="submit" name="nfems_export" value="csv"><?php echo esc_html('Export CSV'); ?></button>
+                        <button class="mcems-btn" type="submit" name="mcems_export" value="csv"><?php echo esc_html('Export CSV'); ?></button>
                         <?php endif; ?>
                     </div>
                 <script>
 (function(){
-    var btn = document.getElementById('nfems_adv_btn');
-    var adv = document.getElementById('nfems_adv');
-    var basicWrap = document.querySelector('.nfems-basic-filters');
-    var advWrap   = document.querySelector('.nfems-advanced-filters');
+    var btn = document.getElementById('mcems_adv_btn');
+    var adv = document.getElementById('mcems_adv');
+    var basicWrap = document.querySelector('.mcems-basic-filters');
+    var advWrap   = document.querySelector('.mcems-advanced-filters');
 
     function setMode(isAdv){
         if(adv) adv.value = isAdv ? '1':'0';
@@ -356,17 +356,17 @@ ob_start();
             btn.setAttribute('aria-pressed', isAdv ? 'true' : 'false');
             // Update button label: show the action to switch mode
             btn.textContent = isAdv ? 'Basic search' : 'Advanced search';
-            var sw = btn.querySelector('.nfems-adv-switch');
-            var kb = btn.querySelector('.nfems-adv-knob');
+            var sw = btn.querySelector('.mcems-adv-switch');
+            var kb = btn.querySelector('.mcems-adv-knob');
             if(sw) sw.style.background = isAdv ? '#101828' : '#e4e7ec';
             if(kb) kb.style.left = isAdv ? '18px' : '2px';
         }
 
         // Clear fields from the hidden mode to avoid confusion in URLs
         if(isAdv){
-            var d = document.getElementById('nfems_date'); if(d) d.value='';
+            var d = document.getElementById('mcems_date'); if(d) d.value='';
         } else {
-            ['nfems_from','nfems_to'].forEach(function(id){
+            ['mcems_from','mcems_to'].forEach(function(id){
                 var el=document.getElementById(id);
                 if(!el) return;
                 if(el.tagName==='SELECT') el.value='0';
@@ -392,7 +392,7 @@ ob_start();
 </form>
 
                 <?php if (!$has_filter): ?>
-                    <div class="nfems-empty">📌 <?php echo sprintf(esc_html('Select a date filter and press %1$sFilter%2$s to see the exam bookings list.'), '<strong>', '</strong>'); ?></div>
+                    <div class="mcems-empty">📌 <?php echo sprintf(esc_html('Select a date filter and press %1$sFilter%2$s to see the exam bookings list.'), '<strong>', '</strong>'); ?></div>
                 <?php else: ?>
 
                     <?php
@@ -405,18 +405,18 @@ ob_start();
                         $label = date_i18n('d/m/Y', strtotime((string)$filter['from'])) . ' → ' . date_i18n('d/m/Y', strtotime((string)$filter['to']));
                     }
                     ?>
-                    <div class="nfems-hint">
-                        <span class="nfems-pill">📅 <?php echo esc_html('Date:'); ?> <strong><?php echo esc_html($label); ?></strong></span>
+                    <div class="mcems-hint">
+                        <span class="mcems-pill">📅 <?php echo esc_html('Date:'); ?> <strong><?php echo esc_html($label); ?></strong></span>
                         <?php if ($selected_course > 0): ?>
-                            <span class="nfems-pill">📘 <?php echo esc_html('Course:'); ?> <strong><?php echo esc_html(NFEMS_Tutor::course_title($selected_course)); ?></strong></span>
+                            <span class="mcems-pill">📘 <?php echo esc_html('Course:'); ?> <strong><?php echo esc_html(MCEMS_Tutor::course_title($selected_course)); ?></strong></span>
                         <?php else: ?>
-                            <span class="nfems-pill">📘 <?php echo esc_html('Course:'); ?> <strong><?php echo esc_html('All'); ?></strong></span>
+                            <span class="mcems-pill">📘 <?php echo esc_html('Course:'); ?> <strong><?php echo esc_html('All'); ?></strong></span>
                         <?php endif; ?>
-                        <span class="nfems-pill"><?php echo esc_html('👥 Exam bookings:'); ?> <strong><?php echo (int) count($rows); ?></strong></span>
+                        <span class="mcems-pill"><?php echo esc_html('👥 Exam bookings:'); ?> <strong><?php echo (int) count($rows); ?></strong></span>
                     </div>
 
-                    <div class="nfems-tablewrap">
-                        <table class="nfems-table">
+                    <div class="mcems-tablewrap">
+                        <table class="mcems-table">
                             <thead>
                                 <tr>
                                     <th><?php echo esc_html('Last name'); ?></th>
@@ -439,7 +439,7 @@ ob_start();
                                     <td><?php echo esc_html($r['email']); ?></td>
                                     <td><?php echo esc_html( date_i18n('d/m/Y', strtotime($r['data'])) ); ?></td>
                                     <td><?php echo esc_html($r['ora']); ?></td>
-                                    <td><?php echo esc_html(NFEMS_Tutor::course_title((int)$r['corso'])); ?></td>
+                                    <td><?php echo esc_html(MCEMS_Tutor::course_title((int)$r['corso'])); ?></td>
                                     <td><?php echo self::badge_special(!empty($r['special'])); ?></td>
                                     <td><?php echo esc_html($r['proctor']); ?></td>
                                 </tr>

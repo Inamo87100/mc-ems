@@ -1,12 +1,12 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-class NFEMS_Booking {
+class MCEMS_Booking {
 
     // New: per-course active exam bookings map course_id => booking data
-    const UM_ACTIVE_BOOKINGS = 'nfems_active_bookings'; // array
+    const UM_ACTIVE_BOOKINGS = 'mcems_active_bookings'; // array
     // Legacy single booking
-    const UM_ACTIVE_BOOKING  = 'nfems_active_booking';  // array
+    const UM_ACTIVE_BOOKING  = 'mcems_active_booking';  // array
     const UM_HISTORY         = 'storico_prenotazioni_slot';
 
     public static function init(): void {
@@ -15,13 +15,13 @@ class NFEMS_Booking {
 
         add_action('wp_ajax_get_slot_per_data', [__CLASS__, 'ajax_get_slots_by_date']);
         add_action('wp_ajax_nopriv_get_slot_per_data', [__CLASS__, 'ajax_get_slots_by_date']);
-        add_action('wp_ajax_nfems_get_booking_calendar', [__CLASS__, 'ajax_get_booking_calendar']);
-        add_action('wp_ajax_nopriv_nfems_get_booking_calendar', [__CLASS__, 'ajax_get_booking_calendar']);
+        add_action('wp_ajax_mcems_get_booking_calendar', [__CLASS__, 'ajax_get_booking_calendar']);
+        add_action('wp_ajax_nopriv_mcems_get_booking_calendar', [__CLASS__, 'ajax_get_booking_calendar']);
 
         add_action('wp_ajax_conferma_prenotazione_slot', [__CLASS__, 'ajax_confirm_booking']);
         add_action('wp_ajax_nopriv_conferma_prenotazione_slot', [__CLASS__, 'ajax_confirm_booking']);
 
-        add_action('wp_ajax_nfems_cancel_booking', [__CLASS__, 'ajax_cancel_booking']);
+        add_action('wp_ajax_mcems_cancel_booking', [__CLASS__, 'ajax_cancel_booking']);
 
         // Cleanup when a session is deleted from admin
         add_action('before_delete_post', [__CLASS__, 'on_before_delete_post'], 10, 1);
@@ -32,15 +32,15 @@ class NFEMS_Booking {
        Settings
        ========================= */
     private static function get_anticipo_ore(): int {
-        return max(0, NFEMS_Settings::get_int('anticipo_ore_prenotazione'));
+        return max(0, MCEMS_Settings::get_int('anticipo_ore_prenotazione'));
     }
 
     private static function get_annullamento_ore(): int {
-        return max(0, NFEMS_Settings::get_int('annullamento_ore'));
+        return max(0, MCEMS_Settings::get_int('annullamento_ore'));
     }
 
     private static function is_annullamento_consentito(): bool {
-        return NFEMS_Settings::get_int('consenti_annullamento') === 1;
+        return MCEMS_Settings::get_int('consenti_annullamento') === 1;
     }
 
     /**
@@ -48,32 +48,32 @@ class NFEMS_Booking {
      * We intentionally use floating local time (no trailing Z) so Google keeps
      * the same wall-clock time selected by the user/site.
      */
-    private static function nfems_format_gcal_datetime(string $date, string $time = '00:00:00'): string {
+    private static function mcems_format_gcal_datetime(string $date, string $time = '00:00:00'): string {
         $dt = trim($date . ' ' . $time);
         $ts = strtotime($dt);
         if (!$ts) return '';
         return date('Ymd\THis', $ts);
     }
 
-    private static function nfems_get_google_calendar_url(int $slot_id, int $course_id = 0): string {
+    private static function mcems_get_google_calendar_url(int $slot_id, int $course_id = 0): string {
         if ($slot_id <= 0) return '';
 
-        $date = (string) get_post_meta($slot_id, NFEMS_CPT_Sessioni_Esame::MK_DATE, true);
-        $time = (string) get_post_meta($slot_id, NFEMS_CPT_Sessioni_Esame::MK_TIME, true);
+        $date = (string) get_post_meta($slot_id, MCEMS_CPT_Sessioni_Esame::MK_DATE, true);
+        $time = (string) get_post_meta($slot_id, MCEMS_CPT_Sessioni_Esame::MK_TIME, true);
 
         $course_id = $course_id > 0
             ? $course_id
-            : (int) get_post_meta($slot_id, NFEMS_CPT_Sessioni_Esame::MK_COURSE_ID, true);
+            : (int) get_post_meta($slot_id, MCEMS_CPT_Sessioni_Esame::MK_COURSE_ID, true);
 
         $course_title = $course_id > 0
-            ? NFEMS_Tutor::course_title($course_id)
+            ? MCEMS_Tutor::course_title($course_id)
             : '';
 
         if (!$course_title) {
             $course_title = 'Exam';
         }
 
-        $start = self::nfems_format_gcal_datetime($date, $time ?: '00:00:00');
+        $start = self::mcems_format_gcal_datetime($date, $time ?: '00:00:00');
         if (!$start) return '';
 
         // Default event duration: 1 hour
@@ -114,7 +114,7 @@ class NFEMS_Booking {
         $legacy = get_user_meta($user_id, self::UM_ACTIVE_BOOKING, true);
         if (is_array($legacy) && !empty($legacy['slot_id'])) {
             $slot_id = (int) $legacy['slot_id'];
-            $course_id = (int) get_post_meta($slot_id, NFEMS_CPT_Sessioni_Esame::MK_COURSE_ID, true);
+            $course_id = (int) get_post_meta($slot_id, MCEMS_CPT_Sessioni_Esame::MK_COURSE_ID, true);
             if ($course_id > 0) {
                 $map[$course_id] = [
                     'slot_id'    => $slot_id,
@@ -131,13 +131,13 @@ class NFEMS_Booking {
         $changed = false;
         foreach ($map as $cid => $b) {
             $sid = isset($b['slot_id']) ? (int) $b['slot_id'] : 0;
-            if ($sid <= 0 || get_post_type($sid) !== NFEMS_CPT_Sessioni_Esame::CPT) {
+            if ($sid <= 0 || get_post_type($sid) !== MCEMS_CPT_Sessioni_Esame::CPT) {
                 unset($map[$cid]);
                 $changed = true;
                 continue;
             }
 
-            $occ = get_post_meta($sid, NFEMS_CPT_Sessioni_Esame::MK_OCCUPATI, true);
+            $occ = get_post_meta($sid, MCEMS_CPT_Sessioni_Esame::MK_OCCUPATI, true);
             $occ = is_array($occ) ? $occ : [];
             if (!in_array($user_id, $occ, true)) {
                 unset($map[$cid]);
@@ -178,9 +178,9 @@ class NFEMS_Booking {
         $storico = get_user_meta($user_id, self::UM_HISTORY, true);
         if (!is_array($storico)) $storico = [];
 
-        $data   = (string) get_post_meta($slot_id, NFEMS_CPT_Sessioni_Esame::MK_DATE, true);
-        $orario = (string) get_post_meta($slot_id, NFEMS_CPT_Sessioni_Esame::MK_TIME, true);
-        $corso  = (int) get_post_meta($slot_id, NFEMS_CPT_Sessioni_Esame::MK_COURSE_ID, true);
+        $data   = (string) get_post_meta($slot_id, MCEMS_CPT_Sessioni_Esame::MK_DATE, true);
+        $orario = (string) get_post_meta($slot_id, MCEMS_CPT_Sessioni_Esame::MK_TIME, true);
+        $corso  = (int) get_post_meta($slot_id, MCEMS_CPT_Sessioni_Esame::MK_COURSE_ID, true);
 
         $storico[] = [
             'slot_id'   => $slot_id,
@@ -200,8 +200,8 @@ class NFEMS_Booking {
 
     public static function shortcode_prenota(): string {
         $user_id   = (int) get_current_user_id();
-        $courses   = NFEMS_Tutor::get_courses();
-        $course_pt = NFEMS_Tutor::course_post_type();
+        $courses   = MCEMS_Tutor::get_courses();
+        $course_pt = MCEMS_Tutor::course_post_type();
 
         ob_start();
         ?>
@@ -215,13 +215,13 @@ class NFEMS_Booking {
                     You can book up to <strong><?php echo (int) self::get_anticipo_ore(); ?> hours</strong> before the exam session time.
                 </p>
 
-                <label for="nfems_course_select" style="font-weight:bold; display:block; margin-bottom:8px;">Choose the course:</label>
+                <label for="mcems_course_select" style="font-weight:bold; display:block; margin-bottom:8px;">Choose the course:</label>
                 <?php if (!$course_pt): ?>
                     <p style="color:#f44336; font-weight:bold;">Tutor LMS not detected (course post type not found).</p>
                 <?php elseif (!$courses): ?>
                     <p style="color:#f44336; font-weight:bold;">No published Tutor LMS course found.</p>
                 <?php else: ?>
-                    <select id="nfems_course_select" style="width:100%; padding:10px; border-radius:5px; border:1px solid #ccc; margin-bottom:20px;">
+                    <select id="mcems_course_select" style="width:100%; padding:10px; border-radius:5px; border:1px solid #ccc; margin-bottom:20px;">
                         <option value="">— Select course —</option>
                         <?php foreach ($courses as $cid => $title): ?>
                             <option value="<?php echo (int) $cid; ?>"><?php echo esc_html($title); ?></option>
@@ -231,13 +231,13 @@ class NFEMS_Booking {
 
                 <input type="hidden" id="data_esame" name="data_esame" value="" />
 
-                <div id="nfems-booking-calendar-wrap" style="display:none; margin-bottom:20px;">
+                <div id="mcems-booking-calendar-wrap" style="display:none; margin-bottom:20px;">
                     <label style="font-weight:bold; display:block; margin-bottom:8px; text-align:center;">Choose a date:</label>
 
                     <div style="display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:10px;">
-                        <button type="button" id="nfems-prev-month" style="background:none; border:none; font-size:18px; cursor:pointer; padding:5px 7px; border-radius:50%;">&larr;</button>
-                        <span id="nfems-month-year" style="font-weight:700; font-size:17px; text-transform:capitalize;"></span>
-                        <button type="button" id="nfems-next-month" style="background:none; border:none; font-size:18px; cursor:pointer; padding:5px 7px; border-radius:50%;">&rarr;</button>
+                        <button type="button" id="mcems-prev-month" style="background:none; border:none; font-size:18px; cursor:pointer; padding:5px 7px; border-radius:50%;">&larr;</button>
+                        <span id="mcems-month-year" style="font-weight:700; font-size:17px; text-transform:capitalize;"></span>
+                        <button type="button" id="mcems-next-month" style="background:none; border:none; font-size:18px; cursor:pointer; padding:5px 7px; border-radius:50%;">&rarr;</button>
                     </div>
 
                     <div style="display:grid; grid-template-columns:repeat(7,1fr); max-width:360px; margin:0 auto 4px; gap:4px;">
@@ -250,7 +250,7 @@ class NFEMS_Booking {
                         <div style="text-align:center; font-weight:700; font-size:12px; padding:3px 0;">Sun</div>
                     </div>
 
-                    <div id="nfems-booking-calendar" style="display:grid; grid-template-columns:repeat(7,1fr); max-width:360px; margin:0 auto; gap:4px;"></div>
+                    <div id="mcems-booking-calendar" style="display:grid; grid-template-columns:repeat(7,1fr); max-width:360px; margin:0 auto; gap:4px;"></div>
 
                     <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:10px; margin:12px auto 0; font-size:12px; color:#555; max-width:420px;">
                         <span style="display:inline-flex; align-items:center; gap:5px;">
@@ -280,16 +280,16 @@ class NFEMS_Booking {
 
                 <script>
                 document.addEventListener("DOMContentLoaded", function () {
-                    const courseSelect = document.getElementById('nfems_course_select');
+                    const courseSelect = document.getElementById('mcems_course_select');
                     const dateInput = document.getElementById('data_esame');
                     const slotContainer = document.getElementById('slot-container');
                     const confirmContainer = document.getElementById('confirm-container');
                     const confirmButton = document.getElementById('confirm-button');
-                    const calendarWrap = document.getElementById('nfems-booking-calendar-wrap');
-                    const calendarEl = document.getElementById('nfems-booking-calendar');
-                    const monthYearEl = document.getElementById('nfems-month-year');
-                    const prevMonthBtn = document.getElementById('nfems-prev-month');
-                    const nextMonthBtn = document.getElementById('nfems-next-month');
+                    const calendarWrap = document.getElementById('mcems-booking-calendar-wrap');
+                    const calendarEl = document.getElementById('mcems-booking-calendar');
+                    const monthYearEl = document.getElementById('mcems-month-year');
+                    const prevMonthBtn = document.getElementById('mcems-prev-month');
+                    const nextMonthBtn = document.getElementById('mcems-next-month');
 
                     let selectedSlot = null;
                     let currentMonthDate = new Date();
@@ -346,7 +346,7 @@ class NFEMS_Booking {
                             return Promise.resolve(monthCache[key]);
                         }
 
-                        const url = '<?php echo esc_url(admin_url('admin-ajax.php')); ?>?action=nfems_get_booking_calendar&year='
+                        const url = '<?php echo esc_url(admin_url('admin-ajax.php')); ?>?action=mcems_get_booking_calendar&year='
                             + encodeURIComponent(year)
                             + '&month=' + encodeURIComponent(month + 1)
                             + '&course_id=' + encodeURIComponent(courseSelect ? courseSelect.value : '');
@@ -613,7 +613,7 @@ class NFEMS_Booking {
 
         $map = self::get_active_bookings($user_id);
         if (!$map) {
-            $url = NFEMS_Settings::get_booking_page_url();
+            $url = MCEMS_Settings::get_booking_page_url();
             if ($url) {
                 $btn = '<p><a class="button button-primary" href="' . esc_url($url) . '">Open exam booking calendar</a></p>';
                 return '<p>No active exam booking.</p>' . $btn;
@@ -630,39 +630,39 @@ class NFEMS_Booking {
         ob_start();
         ?>
         <style>
-            .nfems-wrap{max-width:980px;margin:0 auto;}
-            .nfems-h3{margin:0 0 10px;font-size:1.25rem;}
-            .nfems-sub{margin:0 0 18px;color:#667085;font-size:.95rem;}
-            .nfems-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;}
-            .nfems-card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:14px 14px 12px;box-shadow:0 1px 2px rgba(16,24,40,.06);}
-            .nfems-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
-            .nfems-course{font-weight:800;font-size:1rem;line-height:1.3;}
-            .nfems-meta{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;}
-            .nfems-pill{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:#f2f4f7;color:#344054;font-size:12px;font-weight:700;}
-            .nfems-pill strong{font-weight:900;}
-            .nfems-actions{margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
-            .nfems-btn{appearance:none;border:1px solid #d0d5dd;background:#fff;border-radius:10px;padding:8px 12px;font-weight:800;cursor:pointer;text-decoration:none;display:inline-block;}
-            .nfems-btn:hover{background:#f9fafb;}
-            .nfems-muted{color:#667085;font-size:12px;font-weight:700;}
-            .nfems-note{margin-top:14px;color:#667085;font-size:12px;}
+            .mcems-wrap{max-width:980px;margin:0 auto;}
+            .mcems-h3{margin:0 0 10px;font-size:1.25rem;}
+            .mcems-sub{margin:0 0 18px;color:#667085;font-size:.95rem;}
+            .mcems-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;}
+            .mcems-card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:14px 14px 12px;box-shadow:0 1px 2px rgba(16,24,40,.06);}
+            .mcems-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+            .mcems-course{font-weight:800;font-size:1rem;line-height:1.3;}
+            .mcems-meta{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;}
+            .mcems-pill{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:#f2f4f7;color:#344054;font-size:12px;font-weight:700;}
+            .mcems-pill strong{font-weight:900;}
+            .mcems-actions{margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+            .mcems-btn{appearance:none;border:1px solid #d0d5dd;background:#fff;border-radius:10px;padding:8px 12px;font-weight:800;cursor:pointer;text-decoration:none;display:inline-block;}
+            .mcems-btn:hover{background:#f9fafb;}
+            .mcems-muted{color:#667085;font-size:12px;font-weight:700;}
+            .mcems-note{margin-top:14px;color:#667085;font-size:12px;}
         </style>
 
-        <div class="nfems-wrap">
+        <div class="mcems-wrap">
             <div style="padding:16px;border:1px solid #e5e7eb;border-radius:16px;background:linear-gradient(180deg,#ffffff 0%, #fbfcff 100%);">
-                <div class="nfems-row">
+                <div class="mcems-row">
                     <div>
-                        <h3 class="nfems-h3">My exam bookings</h3>
-                        <p class="nfems-sub">Here you can find your active exam bookings (one per course). You can cancel them according to the notice rules.</p>
+                        <h3 class="mcems-h3">My exam bookings</h3>
+                        <p class="mcems-sub">Here you can find your active exam bookings (one per course). You can cancel them according to the notice rules.</p>
                     </div>
                 </div>
 
-                <div class="nfems-grid">
+                <div class="mcems-grid">
                     <?php foreach ($map as $course_id => $b): ?>
                         <?php
                         $course_id = (int) $course_id;
                         $slot_id   = (int) ($b['slot_id'] ?? 0);
-                        $data      = (string) get_post_meta($slot_id, NFEMS_CPT_Sessioni_Esame::MK_DATE, true);
-                        $orario    = (string) get_post_meta($slot_id, NFEMS_CPT_Sessioni_Esame::MK_TIME, true);
+                        $data      = (string) get_post_meta($slot_id, MCEMS_CPT_Sessioni_Esame::MK_DATE, true);
+                        $orario    = (string) get_post_meta($slot_id, MCEMS_CPT_Sessioni_Esame::MK_TIME, true);
 
                         $slot_ts = strtotime($data . ' ' . $orario);
                         $now_ts  = (int) current_time('timestamp');
@@ -673,56 +673,56 @@ class NFEMS_Booking {
                         );
 
                         $data_h   = $data ? date_i18n('d/m/Y', strtotime($data)) : '';
-                        $gcal_url = self::nfems_get_google_calendar_url($slot_id, $course_id);
+                        $gcal_url = self::mcems_get_google_calendar_url($slot_id, $course_id);
                         ?>
-                        <div class="nfems-card">
-                            <div class="nfems-row">
-                                <div class="nfems-course"><?php echo esc_html(NFEMS_Tutor::course_title($course_id)); ?></div>
-                                <div class="nfems-muted">ID: <?php echo (int) $slot_id; ?></div>
+                        <div class="mcems-card">
+                            <div class="mcems-row">
+                                <div class="mcems-course"><?php echo esc_html(MCEMS_Tutor::course_title($course_id)); ?></div>
+                                <div class="mcems-muted">ID: <?php echo (int) $slot_id; ?></div>
                             </div>
 
-                            <div class="nfems-meta">
-                                <span class="nfems-pill">📅 <strong><?php echo esc_html($data_h); ?></strong></span>
-                                <span class="nfems-pill">⏰ <strong><?php echo esc_html($orario); ?></strong></span>
+                            <div class="mcems-meta">
+                                <span class="mcems-pill">📅 <strong><?php echo esc_html($data_h); ?></strong></span>
+                                <span class="mcems-pill">⏰ <strong><?php echo esc_html($orario); ?></strong></span>
                             </div>
 
-                            <div class="nfems-actions">
+                            <div class="mcems-actions">
                                 <?php if ($gcal_url): ?>
-                                    <a class="nfems-btn" target="_blank" rel="noopener noreferrer" href="<?php echo esc_url($gcal_url); ?>">Add to Google Calendar</a>
+                                    <a class="mcems-btn" target="_blank" rel="noopener noreferrer" href="<?php echo esc_url($gcal_url); ?>">Add to Google Calendar</a>
                                 <?php endif; ?>
 
                                 <?php if ($can_cancel): ?>
-                                    <button class="nfems-btn nfems-cancel" data-slot="<?php echo (int) $slot_id; ?>" data-course="<?php echo (int) $course_id; ?>">Cancel exam booking</button>
+                                    <button class="mcems-btn mcems-cancel" data-slot="<?php echo (int) $slot_id; ?>" data-course="<?php echo (int) $course_id; ?>">Cancel exam booking</button>
                                     <?php if ($slot_ts > $now_ts): ?>
-                                        <span class="nfems-muted">Exam booking cancellation deadline: <?php echo (int) self::get_annullamento_ore(); ?>h before the exam session</span>
+                                        <span class="mcems-muted">Exam booking cancellation deadline: <?php echo (int) self::get_annullamento_ore(); ?>h before the exam session</span>
                                     <?php else: ?>
-                                        <span class="nfems-muted">Past exam session — cancellation allowed</span>
+                                        <span class="mcems-muted">Past exam session — cancellation allowed</span>
                                     <?php endif; ?>
                                 <?php else: ?>
-                                    <span class="nfems-muted">Cancellation is allowed only up to <?php echo (int) self::get_annullamento_ore(); ?>h before the exam session.</span>
+                                    <span class="mcems-muted">Cancellation is allowed only up to <?php echo (int) self::get_annullamento_ore(); ?>h before the exam session.</span>
                                 <?php endif; ?>
                             </div>
                         </div>
                     <?php endforeach; ?>
                 </div>
 
-                <div id="nfems-cancel-msg" class="nfems-note"></div>
+                <div id="mcems-cancel-msg" class="mcems-note"></div>
             </div>
         </div>
 
         <script>
         (function(){
-            const msg = document.getElementById('nfems-cancel-msg');
+            const msg = document.getElementById('mcems-cancel-msg');
 
-            document.querySelectorAll('.nfems-cancel').forEach(btn => {
+            document.querySelectorAll('.mcems-cancel').forEach(btn => {
                 btn.addEventListener('click', function(){
                     if (!confirm('Confirm exam booking cancellation?')) return;
 
                     const fd = new FormData();
-                    fd.append('action','nfems_cancel_booking');
+                    fd.append('action','mcems_cancel_booking');
                     fd.append('slot_id', this.dataset.slot || '');
                     fd.append('course_id', this.dataset.course || '');
-                    fd.append('nonce','<?php echo esc_js(wp_create_nonce('nfems_cancel')); ?>');
+                    fd.append('nonce','<?php echo esc_js(wp_create_nonce('mcems_cancel')); ?>');
 
                     fetch('<?php echo esc_url(admin_url('admin-ajax.php')); ?>', { method:'POST', body: fd })
                         .then(r => r.json())
@@ -762,7 +762,7 @@ class NFEMS_Booking {
         if ($user_id) {
             $active = self::get_active_booking_for_course($user_id, $course_id);
             if (!empty($active['slot_id'])) {
-                $manage_url = NFEMS_Settings::get_manage_booking_page_url();
+                $manage_url = MCEMS_Settings::get_manage_booking_page_url();
                 if ($manage_url) {
                     $manage_link = '<a href="' . esc_url($manage_url) . '">' . esc_html__('Manage exam booking', 'mc-ems') . '</a>';
                     $msg = sprintf(__('You already have an active exam booking for this course. Go to %s to cancel it.', 'mc-ems'), $manage_link);
@@ -777,24 +777,24 @@ class NFEMS_Booking {
         $end   = date('Y-m-t', strtotime($start));
 
         $slots = get_posts([
-            'post_type'      => NFEMS_CPT_Sessioni_Esame::CPT,
+            'post_type'      => MCEMS_CPT_Sessioni_Esame::CPT,
             'posts_per_page' => -1,
             'post_status'    => 'publish',
             'meta_query'     => [
                 [
-                    'key'     => NFEMS_CPT_Sessioni_Esame::MK_COURSE_ID,
+                    'key'     => MCEMS_CPT_Sessioni_Esame::MK_COURSE_ID,
                     'value'   => $course_id,
                     'compare' => '=',
                 ],
                 [
-                    'key'     => NFEMS_CPT_Sessioni_Esame::MK_DATE,
+                    'key'     => MCEMS_CPT_Sessioni_Esame::MK_DATE,
                     'value'   => [$start, $end],
                     'type'    => 'DATE',
                     'compare' => 'BETWEEN',
                 ],
             ],
             'orderby'        => 'meta_value',
-            'meta_key'       => NFEMS_CPT_Sessioni_Esame::MK_DATE,
+            'meta_key'       => MCEMS_CPT_Sessioni_Esame::MK_DATE,
             'order'          => 'ASC',
         ]);
 
@@ -803,17 +803,17 @@ class NFEMS_Booking {
         $anticipo_sec = (int) self::get_anticipo_ore() * HOUR_IN_SECONDS;
 
         foreach ($slots as $slot) {
-            $data      = (string) get_post_meta($slot->ID, NFEMS_CPT_Sessioni_Esame::MK_DATE, true);
-            $orario    = (string) get_post_meta($slot->ID, NFEMS_CPT_Sessioni_Esame::MK_TIME, true);
-            $max_posti = (int) get_post_meta($slot->ID, NFEMS_CPT_Sessioni_Esame::MK_CAPACITY, true);
-            $occupati  = get_post_meta($slot->ID, NFEMS_CPT_Sessioni_Esame::MK_OCCUPATI, true);
+            $data      = (string) get_post_meta($slot->ID, MCEMS_CPT_Sessioni_Esame::MK_DATE, true);
+            $orario    = (string) get_post_meta($slot->ID, MCEMS_CPT_Sessioni_Esame::MK_TIME, true);
+            $max_posti = (int) get_post_meta($slot->ID, MCEMS_CPT_Sessioni_Esame::MK_CAPACITY, true);
+            $occupati  = get_post_meta($slot->ID, MCEMS_CPT_Sessioni_Esame::MK_OCCUPATI, true);
             $occupati  = is_array($occupati) ? $occupati : [];
 
             $slot_ts = strtotime($data . ' ' . $orario);
             if (($slot_ts - $now_ts) <= $anticipo_sec) continue;
 
-            $is_special = ((int) get_post_meta($slot->ID, NFEMS_CPT_Sessioni_Esame::MK_IS_SPECIAL, true) === 1);
-            $spec_uid   = (int) get_post_meta($slot->ID, NFEMS_CPT_Sessioni_Esame::MK_SPECIAL_USER_ID, true);
+            $is_special = ((int) get_post_meta($slot->ID, MCEMS_CPT_Sessioni_Esame::MK_IS_SPECIAL, true) === 1);
+            $spec_uid   = (int) get_post_meta($slot->ID, MCEMS_CPT_Sessioni_Esame::MK_SPECIAL_USER_ID, true);
 
             if ($is_special && $spec_uid > 0 && $user_id > 0 && $user_id !== $spec_uid) continue;
             if ($is_special && $spec_uid > 0 && $user_id <= 0) continue;
@@ -844,7 +844,7 @@ class NFEMS_Booking {
         if ($user_id) {
             $active = self::get_active_booking_for_course($user_id, $course_id);
             if (!empty($active['slot_id'])) {
-                $manage_url = NFEMS_Settings::get_manage_booking_page_url();
+                $manage_url = MCEMS_Settings::get_manage_booking_page_url();
                 if ($manage_url) {
                     $manage_link = '<a href="' . esc_url($manage_url) . '">' . esc_html__('Manage exam booking', 'mc-ems') . '</a>';
                     $msg = sprintf(
@@ -860,24 +860,24 @@ class NFEMS_Booking {
 
         $meta_query = [
             [
-                'key'     => NFEMS_CPT_Sessioni_Esame::MK_DATE,
+                'key'     => MCEMS_CPT_Sessioni_Esame::MK_DATE,
                 'value'   => $data,
                 'compare' => '=',
             ],
             [
-                'key'     => NFEMS_CPT_Sessioni_Esame::MK_COURSE_ID,
+                'key'     => MCEMS_CPT_Sessioni_Esame::MK_COURSE_ID,
                 'value'   => $course_id,
                 'compare' => '=',
             ],
         ];
 
         $slots = get_posts([
-            'post_type'      => NFEMS_CPT_Sessioni_Esame::CPT,
+            'post_type'      => MCEMS_CPT_Sessioni_Esame::CPT,
             'posts_per_page' => -1,
             'post_status'    => 'publish',
             'meta_query'     => $meta_query,
             'orderby'        => 'meta_value',
-            'meta_key'       => NFEMS_CPT_Sessioni_Esame::MK_TIME,
+            'meta_key'       => MCEMS_CPT_Sessioni_Esame::MK_TIME,
             'order'          => 'ASC',
         ]);
 
@@ -886,9 +886,9 @@ class NFEMS_Booking {
         $anticipo_sec = (int) self::get_anticipo_ore() * HOUR_IN_SECONDS;
 
         foreach ($slots as $slot) {
-            $orario    = (string) get_post_meta($slot->ID, NFEMS_CPT_Sessioni_Esame::MK_TIME, true);
-            $max_posti = (int) get_post_meta($slot->ID, NFEMS_CPT_Sessioni_Esame::MK_CAPACITY, true);
-            $occupati  = get_post_meta($slot->ID, NFEMS_CPT_Sessioni_Esame::MK_OCCUPATI, true);
+            $orario    = (string) get_post_meta($slot->ID, MCEMS_CPT_Sessioni_Esame::MK_TIME, true);
+            $max_posti = (int) get_post_meta($slot->ID, MCEMS_CPT_Sessioni_Esame::MK_CAPACITY, true);
+            $occupati  = get_post_meta($slot->ID, MCEMS_CPT_Sessioni_Esame::MK_OCCUPATI, true);
             $occupati  = is_array($occupati) ? $occupati : [];
 
             if (count($occupati) >= $max_posti) continue;
@@ -896,8 +896,8 @@ class NFEMS_Booking {
             $slot_ts = strtotime($data . ' ' . $orario);
             if (($slot_ts - $now_ts) <= $anticipo_sec) continue;
 
-            $is_special = ((int) get_post_meta($slot->ID, NFEMS_CPT_Sessioni_Esame::MK_IS_SPECIAL, true) === 1);
-            $spec_uid   = (int) get_post_meta($slot->ID, NFEMS_CPT_Sessioni_Esame::MK_SPECIAL_USER_ID, true);
+            $is_special = ((int) get_post_meta($slot->ID, MCEMS_CPT_Sessioni_Esame::MK_IS_SPECIAL, true) === 1);
+            $spec_uid   = (int) get_post_meta($slot->ID, MCEMS_CPT_Sessioni_Esame::MK_SPECIAL_USER_ID, true);
 
             if ($is_special && $spec_uid > 0 && $user_id > 0 && $user_id !== $spec_uid) continue;
 
@@ -920,12 +920,12 @@ class NFEMS_Booking {
         }
 
         $slot_id = isset($_POST['slot_id']) ? (int) $_POST['slot_id'] : 0;
-        if ($slot_id <= 0 || get_post_type($slot_id) !== NFEMS_CPT_Sessioni_Esame::CPT) {
+        if ($slot_id <= 0 || get_post_type($slot_id) !== MCEMS_CPT_Sessioni_Esame::CPT) {
             echo '<p style="color:#f44336; font-weight:bold; text-align:center;">Invalid exam session.</p>';
             wp_die();
         }
 
-        $course_id = (int) get_post_meta($slot_id, NFEMS_CPT_Sessioni_Esame::MK_COURSE_ID, true);
+        $course_id = (int) get_post_meta($slot_id, MCEMS_CPT_Sessioni_Esame::MK_COURSE_ID, true);
         if ($course_id <= 0) {
             echo '<p style="color:#f44336; font-weight:bold; text-align:center;">Exam session is not associated with a course.</p>';
             wp_die();
@@ -937,22 +937,22 @@ class NFEMS_Booking {
             wp_die();
         }
 
-        $lock_key = '_nfems_lock';
+        $lock_key = '_mcems_lock';
         if (get_post_meta($slot_id, $lock_key, true)) {
             echo '<p style="color:#f44336; font-weight:bold; text-align:center;">Exam session is being updated, please try again.</p>';
             wp_die();
         }
         update_post_meta($slot_id, $lock_key, time());
 
-        $data   = (string) get_post_meta($slot_id, NFEMS_CPT_Sessioni_Esame::MK_DATE, true);
-        $orario = (string) get_post_meta($slot_id, NFEMS_CPT_Sessioni_Esame::MK_TIME, true);
-        $max    = (int) get_post_meta($slot_id, NFEMS_CPT_Sessioni_Esame::MK_CAPACITY, true);
+        $data   = (string) get_post_meta($slot_id, MCEMS_CPT_Sessioni_Esame::MK_DATE, true);
+        $orario = (string) get_post_meta($slot_id, MCEMS_CPT_Sessioni_Esame::MK_TIME, true);
+        $max    = (int) get_post_meta($slot_id, MCEMS_CPT_Sessioni_Esame::MK_CAPACITY, true);
 
-        $occupati = get_post_meta($slot_id, NFEMS_CPT_Sessioni_Esame::MK_OCCUPATI, true);
+        $occupati = get_post_meta($slot_id, MCEMS_CPT_Sessioni_Esame::MK_OCCUPATI, true);
         if (!is_array($occupati)) $occupati = [];
 
-        $is_special = ((int) get_post_meta($slot_id, NFEMS_CPT_Sessioni_Esame::MK_IS_SPECIAL, true) === 1);
-        $spec_uid   = (int) get_post_meta($slot_id, NFEMS_CPT_Sessioni_Esame::MK_SPECIAL_USER_ID, true);
+        $is_special = ((int) get_post_meta($slot_id, MCEMS_CPT_Sessioni_Esame::MK_IS_SPECIAL, true) === 1);
+        $spec_uid   = (int) get_post_meta($slot_id, MCEMS_CPT_Sessioni_Esame::MK_SPECIAL_USER_ID, true);
         if ($is_special && $spec_uid > 0 && $user_id !== $spec_uid) {
             delete_post_meta($slot_id, $lock_key);
             echo '<p style="color:#f44336; font-weight:bold; text-align:center;">This exam session is reserved.</p>';
@@ -979,7 +979,7 @@ class NFEMS_Booking {
 
         $occupati[] = $user_id;
         $occupati = array_values(array_unique(array_map('intval', $occupati)));
-        update_post_meta($slot_id, NFEMS_CPT_Sessioni_Esame::MK_OCCUPATI, $occupati);
+        update_post_meta($slot_id, MCEMS_CPT_Sessioni_Esame::MK_OCCUPATI, $occupati);
 
         self::set_active_booking_for_course($user_id, $course_id, [
             'slot_id'    => $slot_id,
@@ -992,7 +992,7 @@ class NFEMS_Booking {
         delete_post_meta($slot_id, $lock_key);
         self::maybe_send_booking_notifications($user_id, $slot_id, $course_id, 'booked');
 
-        $course_title = NFEMS_Tutor::course_title($course_id);
+        $course_title = MCEMS_Tutor::course_title($course_id);
 
         echo '<p style="text-align:center; color:#4CAF50; font-weight:bold;">Exam booking confirmed!</p>';
         if ($course_title) {
@@ -1000,14 +1000,14 @@ class NFEMS_Booking {
         }
         echo '<p style="text-align:center;">Exam session: <strong>' . esc_html(date_i18n('d/m/Y', strtotime($data))) . '</strong> at <strong>' . esc_html($orario) . '</strong></p>';
 
-        $gcal_url = self::nfems_get_google_calendar_url($slot_id, $course_id);
+        $gcal_url = self::mcems_get_google_calendar_url($slot_id, $course_id);
         if ($gcal_url) {
             echo '<p style="text-align:center; margin-top:14px;">';
             echo '<a class="button" target="_blank" rel="noopener noreferrer" href="' . esc_url($gcal_url) . '">Add to Google Calendar</a>';
             echo '</p>';
         }
 
-        $manage_url = NFEMS_Settings::get_manage_booking_page_url();
+        $manage_url = MCEMS_Settings::get_manage_booking_page_url();
         if ($manage_url) {
             $manage_link = add_query_arg(['course_id' => $course_id], $manage_url);
             echo '<p style="text-align:center; margin-top:14px;"><a class="button button-primary" href="' . esc_url($manage_link) . '">Manage exam booking</a></p>';
@@ -1020,7 +1020,7 @@ class NFEMS_Booking {
         $user_id = (int) get_current_user_id();
         if (!$user_id) wp_send_json_error('You must be logged in.');
 
-        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'nfems_cancel')) {
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'mcems_cancel')) {
             wp_send_json_error('Invalid nonce.');
         }
 
@@ -1032,14 +1032,14 @@ class NFEMS_Booking {
         $course_id = isset($_POST['course_id']) ? (int) $_POST['course_id'] : 0;
         if ($slot_id <= 0) wp_send_json_error('Invalid exam session.');
 
-        if (get_post_type($slot_id) !== NFEMS_CPT_Sessioni_Esame::CPT) {
+        if (get_post_type($slot_id) !== MCEMS_CPT_Sessioni_Esame::CPT) {
             if ($course_id > 0) self::remove_active_booking_for_course($user_id, $course_id);
             wp_send_json_success(true);
         }
 
-        $data        = (string) get_post_meta($slot_id, NFEMS_CPT_Sessioni_Esame::MK_DATE, true);
-        $orario      = (string) get_post_meta($slot_id, NFEMS_CPT_Sessioni_Esame::MK_TIME, true);
-        $slot_course = (int) get_post_meta($slot_id, NFEMS_CPT_Sessioni_Esame::MK_COURSE_ID, true);
+        $data        = (string) get_post_meta($slot_id, MCEMS_CPT_Sessioni_Esame::MK_DATE, true);
+        $orario      = (string) get_post_meta($slot_id, MCEMS_CPT_Sessioni_Esame::MK_TIME, true);
+        $slot_course = (int) get_post_meta($slot_id, MCEMS_CPT_Sessioni_Esame::MK_COURSE_ID, true);
         if ($course_id <= 0) $course_id = $slot_course;
 
         $slot_ts = strtotime($data . ' ' . $orario);
@@ -1051,7 +1051,7 @@ class NFEMS_Booking {
             }
         }
 
-        $occupati = get_post_meta($slot_id, NFEMS_CPT_Sessioni_Esame::MK_OCCUPATI, true);
+        $occupati = get_post_meta($slot_id, MCEMS_CPT_Sessioni_Esame::MK_OCCUPATI, true);
         if (!is_array($occupati)) $occupati = [];
 
         if (!in_array($user_id, $occupati, true)) {
@@ -1059,8 +1059,8 @@ class NFEMS_Booking {
             wp_send_json_error('You are not booked on this session (meta realigned).');
         }
 
-        $is_special = ((int) get_post_meta($slot_id, NFEMS_CPT_Sessioni_Esame::MK_IS_SPECIAL, true) === 1);
-        $spec_uid   = (int) get_post_meta($slot_id, NFEMS_CPT_Sessioni_Esame::MK_SPECIAL_USER_ID, true);
+        $is_special = ((int) get_post_meta($slot_id, MCEMS_CPT_Sessioni_Esame::MK_IS_SPECIAL, true) === 1);
+        $spec_uid   = (int) get_post_meta($slot_id, MCEMS_CPT_Sessioni_Esame::MK_SPECIAL_USER_ID, true);
         if ($is_special && $spec_uid > 0) {
             wp_send_json_error('This session is reserved and cannot be cancelled from the front-end.');
         }
@@ -1068,7 +1068,7 @@ class NFEMS_Booking {
         $occupati = array_values(array_filter(array_map('intval', $occupati), function($id) use ($user_id) {
             return (int) $id !== (int) $user_id;
         }));
-        update_post_meta($slot_id, NFEMS_CPT_Sessioni_Esame::MK_OCCUPATI, $occupati);
+        update_post_meta($slot_id, MCEMS_CPT_Sessioni_Esame::MK_OCCUPATI, $occupati);
 
         if ($course_id > 0) self::remove_active_booking_for_course($user_id, $course_id);
         self::add_history($user_id, $slot_id, 'cancelled');
@@ -1078,15 +1078,15 @@ class NFEMS_Booking {
     }
 
     private static function email_placeholders($user, $slot_id, $course_id): array {
-        $date         = (string) get_post_meta($slot_id, NFEMS_CPT_Sessioni_Esame::MK_DATE, true);
-        $time         = (string) get_post_meta($slot_id, NFEMS_CPT_Sessioni_Esame::MK_TIME, true);
-        $course_title = NFEMS_Tutor::course_title($course_id);
+        $date         = (string) get_post_meta($slot_id, MCEMS_CPT_Sessioni_Esame::MK_DATE, true);
+        $time         = (string) get_post_meta($slot_id, MCEMS_CPT_Sessioni_Esame::MK_TIME, true);
+        $course_title = MCEMS_Tutor::course_title($course_id);
         $date_label   = $date ? date_i18n('d/m/Y', strtotime($date)) : '';
 
-        $manage_url = NFEMS_Settings::get_manage_booking_page_url();
+        $manage_url = MCEMS_Settings::get_manage_booking_page_url();
         if ($manage_url) $manage_url = add_query_arg(['course_id' => $course_id], $manage_url);
 
-        $booking_url = NFEMS_Settings::get_booking_page_url();
+        $booking_url = MCEMS_Settings::get_booking_page_url();
         if ($booking_url) $booking_url = add_query_arg(['course_id' => $course_id], $booking_url);
 
         return [
@@ -1105,13 +1105,13 @@ class NFEMS_Booking {
         $user = get_user_by('id', $user_id);
         if (!$user) return;
 
-        $headers = NFEMS_Settings::get_mail_headers();
+        $headers = MCEMS_Settings::get_mail_headers();
         $ph = self::email_placeholders($user, $slot_id, $course_id);
 
         if ($action === 'booked') {
-            if (NFEMS_Settings::email_enabled('email_send_booking_confirmation', 1) && $user->user_email) {
-                $subject = NFEMS_Settings::get_email_template('email_subject_booking_confirmation', 'Exam booking confirmed — {course_title}');
-                $body    = NFEMS_Settings::get_email_template('email_body_booking_confirmation', "Hello {candidate_name}
+            if (MCEMS_Settings::email_enabled('email_send_booking_confirmation', 1) && $user->user_email) {
+                $subject = MCEMS_Settings::get_email_template('email_subject_booking_confirmation', 'Exam booking confirmed — {course_title}');
+                $body    = MCEMS_Settings::get_email_template('email_body_booking_confirmation', "Hello {candidate_name}
 
 Your exam booking has been confirmed.
 Course: {course_title}
@@ -1121,17 +1121,17 @@ Manage exam booking: {manage_booking_url}");
 
                 wp_mail(
                     $user->user_email,
-                    NFEMS_Settings::render_email_template($subject, $ph),
-                    NFEMS_Settings::render_email_template($body, $ph),
+                    MCEMS_Settings::render_email_template($subject, $ph),
+                    MCEMS_Settings::render_email_template($body, $ph),
                     $headers
                 );
             }
 
-            if (NFEMS_Settings::email_enabled('email_send_admin_booking', 0)) {
-                $to = NFEMS_Settings::get_admin_recipients();
+            if (MCEMS_Settings::email_enabled('email_send_admin_booking', 0)) {
+                $to = MCEMS_Settings::get_admin_recipients();
                 if ($to) {
-                    $subject = NFEMS_Settings::get_email_template('email_subject_admin_booking', 'New exam booking — {course_title}');
-                    $body    = NFEMS_Settings::get_email_template('email_body_admin_booking', "A new booking has been created.
+                    $subject = MCEMS_Settings::get_email_template('email_subject_admin_booking', 'New exam booking — {course_title}');
+                    $body    = MCEMS_Settings::get_email_template('email_body_admin_booking', "A new booking has been created.
 
 Candidate: {candidate_name} <{candidate_email}>
 Course: {course_title}
@@ -1141,8 +1141,8 @@ Manage exam booking: {manage_booking_url}");
 
                     wp_mail(
                         $to,
-                        NFEMS_Settings::render_email_template($subject, $ph),
-                        NFEMS_Settings::render_email_template($body, $ph),
+                        MCEMS_Settings::render_email_template($subject, $ph),
+                        MCEMS_Settings::render_email_template($body, $ph),
                         $headers
                     );
                 }
@@ -1150,9 +1150,9 @@ Manage exam booking: {manage_booking_url}");
         }
 
         if ($action === 'cancelled') {
-            if (NFEMS_Settings::email_enabled('email_send_booking_cancellation', 1) && $user->user_email) {
-                $subject = NFEMS_Settings::get_email_template('email_subject_booking_cancellation', 'Exam booking cancelled — {course_title}');
-                $body    = NFEMS_Settings::get_email_template('email_body_booking_cancellation', "Hello {candidate_name}
+            if (MCEMS_Settings::email_enabled('email_send_booking_cancellation', 1) && $user->user_email) {
+                $subject = MCEMS_Settings::get_email_template('email_subject_booking_cancellation', 'Exam booking cancelled — {course_title}');
+                $body    = MCEMS_Settings::get_email_template('email_body_booking_cancellation', "Hello {candidate_name}
 
 Your exam booking has been cancelled.
 Course: {course_title}
@@ -1161,17 +1161,17 @@ Time: {session_time}");
 
                 wp_mail(
                     $user->user_email,
-                    NFEMS_Settings::render_email_template($subject, $ph),
-                    NFEMS_Settings::render_email_template($body, $ph),
+                    MCEMS_Settings::render_email_template($subject, $ph),
+                    MCEMS_Settings::render_email_template($body, $ph),
                     $headers
                 );
             }
 
-            if (NFEMS_Settings::email_enabled('email_send_admin_cancellation', 0)) {
-                $to = NFEMS_Settings::get_admin_recipients();
+            if (MCEMS_Settings::email_enabled('email_send_admin_cancellation', 0)) {
+                $to = MCEMS_Settings::get_admin_recipients();
                 if ($to) {
-                    $subject = NFEMS_Settings::get_email_template('email_subject_admin_cancellation', 'Exam booking cancelled — {course_title}');
-                    $body    = NFEMS_Settings::get_email_template('email_body_admin_cancellation', "A booking has been cancelled.
+                    $subject = MCEMS_Settings::get_email_template('email_subject_admin_cancellation', 'Exam booking cancelled — {course_title}');
+                    $body    = MCEMS_Settings::get_email_template('email_body_admin_cancellation', "A booking has been cancelled.
 
 Candidate: {candidate_name} <{candidate_email}>
 Course: {course_title}
@@ -1180,8 +1180,8 @@ Time: {session_time}");
 
                     wp_mail(
                         $to,
-                        NFEMS_Settings::render_email_template($subject, $ph),
-                        NFEMS_Settings::render_email_template($body, $ph),
+                        MCEMS_Settings::render_email_template($subject, $ph),
+                        MCEMS_Settings::render_email_template($body, $ph),
                         $headers
                     );
                 }
@@ -1193,10 +1193,10 @@ Time: {session_time}");
        Deletion cleanup
        ========================= */
     public static function on_before_delete_post(int $post_id): void {
-        if (get_post_type($post_id) !== NFEMS_CPT_Sessioni_Esame::CPT) return;
+        if (get_post_type($post_id) !== MCEMS_CPT_Sessioni_Esame::CPT) return;
 
-        $course_id = (int) get_post_meta($post_id, NFEMS_CPT_Sessioni_Esame::MK_COURSE_ID, true);
-        $occ       = get_post_meta($post_id, NFEMS_CPT_Sessioni_Esame::MK_OCCUPATI, true);
+        $course_id = (int) get_post_meta($post_id, MCEMS_CPT_Sessioni_Esame::MK_COURSE_ID, true);
+        $occ       = get_post_meta($post_id, MCEMS_CPT_Sessioni_Esame::MK_OCCUPATI, true);
         $occ       = is_array($occ) ? $occ : [];
 
         if ($course_id > 0 && $occ) {

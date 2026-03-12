@@ -26,8 +26,8 @@ final class EMS_Premium_Bootstrap {
     }
 
     public static function base_active(): bool {
-        // Base defines NFEMS_VERSION and provides these classes.
-        return defined('NFEMS_VERSION') && class_exists('NFEMS_Settings') && class_exists('NFEMS_CPT_Sessioni_Esame');
+        // Base defines MCEMS_VERSION and provides these classes.
+        return defined('MCEMS_VERSION') && class_exists('MCEMS_Settings') && class_exists('MCEMS_CPT_Sessioni_Esame');
     }
 
     public static function notice_missing_base(): void {
@@ -40,15 +40,15 @@ final class EMS_Premium_Bootstrap {
     public static function boot(): void {
         if (!self::base_active()) return;
 
-        require_once plugin_dir_path(__FILE__) . 'includes/class-nfems-bookings-list.php';
+        require_once plugin_dir_path(__FILE__) . 'includes/class-mcems-bookings-list.php';
 
         // Replace placeholder shortcode (Base) with real one
         if (shortcode_exists('mcems_bookings_list')) {
             remove_shortcode('mcems_bookings_list');
         }
 
-        if (class_exists('NFEMS_Bookings_List')) {
-            NFEMS_Bookings_List::init();
+        if (class_exists('MCEMS_Bookings_List')) {
+            MCEMS_Bookings_List::init();
         }
     }
 }

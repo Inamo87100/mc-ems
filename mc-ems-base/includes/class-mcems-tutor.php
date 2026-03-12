@@ -1,7 +1,7 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-class NFEMS_Tutor {
+class MCEMS_Tutor {
 
     public static function course_post_type(): string {
         if (post_type_exists('courses')) return 'courses';

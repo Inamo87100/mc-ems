@@ -3,11 +3,11 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-if (!defined('NF_SLOT_ESIGENZE_SPECIALI')) {
-    define('NF_SLOT_ESIGENZE_SPECIALI', 'slot_esigenze_speciali');
+if (!defined('MC_SLOT_ESIGENZE_SPECIALI')) {
+    define('MC_SLOT_ESIGENZE_SPECIALI', 'slot_esigenze_speciali');
 }
 
-class NFEMS_Calendar_Sessioni {
+class MCEMS_Calendar_Sessioni {
 
     const NONCE_ACTION = 'cal_slot_nonce';
     const CRON_HOOK    = 'cal_slot_midnight_check';
@@ -31,65 +31,65 @@ class NFEMS_Calendar_Sessioni {
     }
 
     private static function cpt(): string {
-        if (class_exists('NFEMS_CPT_Sessioni_Esame') && defined('NFEMS_CPT_Sessioni_Esame::CPT')) {
-            return NFEMS_CPT_Sessioni_Esame::CPT;
+        if (class_exists('MCEMS_CPT_Sessioni_Esame') && defined('MCEMS_CPT_Sessioni_Esame::CPT')) {
+            return MCEMS_CPT_Sessioni_Esame::CPT;
         }
         return 'slot_esame';
     }
 
     private static function mk(string $const, string $fallback) {
-        $full = 'NFEMS_CPT_Sessioni_Esame::' . $const;
+        $full = 'MCEMS_CPT_Sessioni_Esame::' . $const;
         return defined($full) ? constant($full) : $fallback;
     }
 
     /**
      * Priorità ai meta originali del calendario.
-     * Fallback ai meta NFEMS solo se servono.
+     * Fallback ai meta MCEMS solo se servono.
      */
     private static function meta_keys(string $type): array {
         $map = [
             'date' => [
                 'slot_data',
                 self::mk('MK_DATE', 'slot_data'),
-                '_nfems_data',
+                '_mcems_data',
                 'data',
                 'date',
             ],
             'time' => [
                 'slot_orario',
                 self::mk('MK_TIME', 'slot_orario'),
-                '_nfems_orario',
+                '_mcems_orario',
                 'orario',
                 'time',
             ],
             'capacity' => [
                 'slot_posti_max',
                 self::mk('MK_CAPACITY', 'slot_posti_max'),
-                '_nfems_capacity',
+                '_mcems_capacity',
                 'capacity',
             ],
             'occupied' => [
                 'slot_posti_occupati',
                 self::mk('MK_OCCUPATI', 'slot_posti_occupati'),
-                '_nfems_occupati',
+                '_mcems_occupati',
                 'occupati',
             ],
             'course_id' => [
                 'slot_corso_id',
                 self::mk('MK_COURSE_ID', 'slot_corso_id'),
-                '_nfems_course_id',
+                '_mcems_course_id',
                 'course_id',
             ],
             'is_special' => [
-                NF_SLOT_ESIGENZE_SPECIALI,
-                self::mk('MK_IS_SPECIAL', NF_SLOT_ESIGENZE_SPECIALI),
-                '_nfems_is_special',
+                MC_SLOT_ESIGENZE_SPECIALI,
+                self::mk('MK_IS_SPECIAL', MC_SLOT_ESIGENZE_SPECIALI),
+                '_mcems_is_special',
                 'is_special',
             ],
             'special_user_id' => [
                 'slot_special_user_id',
                 self::mk('MK_SPECIAL_USER_ID', 'slot_special_user_id'),
-                '_nfems_special_user_id',
+                '_mcems_special_user_id',
                 'special_user_id',
             ],
             'assigned' => [
@@ -106,8 +106,8 @@ class NFEMS_Calendar_Sessioni {
             ],
             'proctor' => [
                 'slot_sorvegliante',
-                '_nfems_proctor_user_id',
-                'nfems_proctor_user_id',
+                '_mcems_proctor_user_id',
+                'mcems_proctor_user_id',
             ],
             'warn_sent_for' => [
                 'slot_unassigned_warn_sent_for',
@@ -182,14 +182,14 @@ class NFEMS_Calendar_Sessioni {
     }
 
     private static function get_calendar_recipients(): array {
-        if (!class_exists('NFEMS_Settings')) {
+        if (!class_exists('MCEMS_Settings')) {
             $fallback = sanitize_email((string) get_option('admin_email'));
             return $fallback ? [$fallback] : [];
         }
 
-        $raw = trim((string) NFEMS_Settings::get_str('cal_email_notify_to'));
+        $raw = trim((string) MCEMS_Settings::get_str('cal_email_notify_to'));
         if ($raw === '') {
-            $raw = trim((string) NFEMS_Settings::get_str('email_admin_recipients'));
+            $raw = trim((string) MCEMS_Settings::get_str('email_admin_recipients'));
         }
         if ($raw === '') {
             $raw = (string) get_option('admin_email');
@@ -229,7 +229,7 @@ class NFEMS_Calendar_Sessioni {
     }
 
     private static function send_calendar_mail(string $subject_key, string $body_key, array $placeholders = [], ?array $recipients = null): void {
-        if (!class_exists('NFEMS_Settings')) {
+        if (!class_exists('MCEMS_Settings')) {
             return;
         }
 
@@ -250,14 +250,14 @@ class NFEMS_Calendar_Sessioni {
             'cal_email_body_warning' => "The following exam session is scheduled for tomorrow and still has no assigned proctor.\n\nCourse: {course_title}\nDate: {session_date}\nTime: {session_time}\nSession ID: {session_id}",
         ];
 
-        $subject = NFEMS_Settings::get_email_template($subject_key, $default_subjects[$subject_key] ?? '');
-        $body    = NFEMS_Settings::get_email_template($body_key, $default_bodies[$body_key] ?? '');
-        $headers = NFEMS_Settings::get_mail_headers();
+        $subject = MCEMS_Settings::get_email_template($subject_key, $default_subjects[$subject_key] ?? '');
+        $body    = MCEMS_Settings::get_email_template($body_key, $default_bodies[$body_key] ?? '');
+        $headers = MCEMS_Settings::get_mail_headers();
 
         wp_mail(
             $to,
-            NFEMS_Settings::render_email_template($subject, $placeholders),
-            NFEMS_Settings::render_email_template($body, $placeholders),
+            MCEMS_Settings::render_email_template($subject, $placeholders),
+            MCEMS_Settings::render_email_template($body, $placeholders),
             $headers
         );
     }
@@ -1080,7 +1080,7 @@ class NFEMS_Calendar_Sessioni {
         self::delete_meta_group($slot_id, 'warn_sent_legacy');
         self::delete_meta_group($slot_id, 'warn_sent_for');
 
-        if (class_exists('NFEMS_Settings') && NFEMS_Settings::email_enabled('cal_email_on_assign', 0)) {
+        if (class_exists('MCEMS_Settings') && MCEMS_Settings::email_enabled('cal_email_on_assign', 0)) {
             self::send_calendar_mail(
                 'cal_email_subject',
                 'cal_email_body',
@@ -1116,7 +1116,7 @@ class NFEMS_Calendar_Sessioni {
         self::delete_meta_group($slot_id, 'warn_sent_legacy');
         self::delete_meta_group($slot_id, 'warn_sent_for');
 
-        if (class_exists('NFEMS_Settings') && NFEMS_Settings::email_enabled('cal_email_on_assign', 0)) {
+        if (class_exists('MCEMS_Settings') && MCEMS_Settings::email_enabled('cal_email_on_assign', 0)) {
             self::send_calendar_mail(
                 'cal_email_subject',
                 'cal_email_body',
@@ -1157,7 +1157,7 @@ class NFEMS_Calendar_Sessioni {
         self::delete_meta_group($slot_id, 'warn_sent_legacy');
         self::delete_meta_group($slot_id, 'warn_sent_for');
 
-        if (class_exists('NFEMS_Settings') && NFEMS_Settings::email_enabled('cal_email_on_unassign', 0)) {
+        if (class_exists('MCEMS_Settings') && MCEMS_Settings::email_enabled('cal_email_on_unassign', 0)) {
             self::send_calendar_mail(
                 'cal_email_subject_unassign',
                 'cal_email_body_unassign',
@@ -1212,7 +1212,7 @@ class NFEMS_Calendar_Sessioni {
             $already_sent_for = self::get_first_meta($slot_id, 'warn_sent_for', true);
             if ($already_sent_for === $target_iso) continue;
 
-            if (class_exists('NFEMS_Settings') && NFEMS_Settings::email_enabled('cal_email_on_unassigned_warning', 1)) {
+            if (class_exists('MCEMS_Settings') && MCEMS_Settings::email_enabled('cal_email_on_unassigned_warning', 1)) {
                 self::send_calendar_mail(
                     'cal_email_subject_warning',
                     'cal_email_body_warning',
@@ -1226,4 +1226,4 @@ class NFEMS_Calendar_Sessioni {
     }
 }
 
-NFEMS_Calendar_Sessioni::init();
+MCEMS_Calendar_Sessioni::init();

@@ -1,7 +1,7 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-class NFEMS_Admin_Banner {
+class MCEMS_Admin_Banner {
 
     public static function init() {
         add_action('admin_notices', [__CLASS__, 'render']);
@@ -15,13 +15,13 @@ class NFEMS_Admin_Banner {
         $screen_id = isset($screen->id) ? (string) $screen->id : '';
         $post_type = isset($screen->post_type) ? (string) $screen->post_type : '';
 
-        if ($post_type === NFEMS_CPT_Sessioni_Esame::CPT) {
+        if ($post_type === MCEMS_CPT_Sessioni_Esame::CPT) {
             return true;
         }
 
         $allowed = [
-            NFEMS_CPT_Sessioni_Esame::CPT . '_page_nfems-settings-cpt',
-            NFEMS_CPT_Sessioni_Esame::CPT . '_page_nfems-gestione-sessioni',
+            MCEMS_CPT_Sessioni_Esame::CPT . '_page_mcems-settings-cpt',
+            MCEMS_CPT_Sessioni_Esame::CPT . '_page_mcems-gestione-sessioni',
         ];
 
         return in_array($screen_id, $allowed, true);
@@ -36,7 +36,7 @@ class NFEMS_Admin_Banner {
         if (!self::is_plugin_screen()) return;
 
         $is_premium = self::premium_active();
-        $logo_url = NFEMS_PLUGIN_URL . 'assets/images/mamba-logo.png';
+        $logo_url = MCEMS_PLUGIN_URL . 'assets/images/mamba-logo.png';
         $target = 'https://mambacoding.com/';
 
         $headline = $is_premium
