@@ -12,6 +12,7 @@ class MCEMS_Settings {
             'tutor_gate_booking_expiry_value' => 0,
             'tutor_gate_booking_expiry_unit'  => 'hours',
             'tutor_gate_course_ids' => [],
+            'booking_course_ids'    => [],
             'anticipo_ore_prenotazione' => 48,
             'consenti_annullamento'     => 1,
             'annullamento_ore'          => 48,
@@ -116,13 +117,30 @@ class MCEMS_Settings {
     }
 
     public static function get_gate_course_ids(): array {
-        $ids = self::get_array('tutor_gate_course_ids');
+        return self::sanitize_course_id_array(self::get_array('tutor_gate_course_ids'));
+    }
+
+    public static function get_booking_course_ids(): array {
+        return self::sanitize_course_id_array(self::get_array('booking_course_ids'));
+    }
+
+    private static function sanitize_course_id_array(array $ids): array {
         $clean = [];
         foreach ($ids as $id) {
             $id = absint($id);
             if ($id > 0) $clean[] = $id;
         }
         return array_values(array_unique($clean));
+    }
+
+    private static function sanitize_course_ids_input($raw): array {
+        $ids = is_array($raw) ? $raw : [];
+        $clean = self::sanitize_course_id_array($ids);
+        if (class_exists('MCEMS_Tutor') && method_exists('MCEMS_Tutor', 'get_courses')) {
+            $valid = array_map('intval', array_keys(MCEMS_Tutor::get_courses()));
+            $clean = array_values(array_intersect($clean, $valid));
+        }
+        return $clean;
     }
 
     public static function get_str(string $key): string {
@@ -257,6 +275,11 @@ class MCEMS_Settings {
         add_settings_field('tutor_gate_course_ids', __('Protected courses', 'mc-ems'), [__CLASS__, 'field_course_multiselect'], self::OPTION_KEY, 'mcems_section_gate', [
             'key'  => 'tutor_gate_course_ids',
             'desc' => __('If you select one or more courses, the course access gate will apply only to those courses. If left empty, the gate applies to all Tutor LMS courses.', 'mc-ems'),
+        ]);
+
+        add_settings_field('booking_course_ids', __('Courses visible in booking dropdown', 'mc-ems'), [__CLASS__, 'field_course_multiselect'], self::OPTION_KEY, 'mcems_section_gate', [
+            'key'  => 'booking_course_ids',
+            'desc' => __('Select which courses appear in the course dropdown during session booking. If left empty, all published Tutor LMS courses will be shown.', 'mc-ems'),
         ]);
 
         add_settings_section('mcems_section_email', __('Email settings', 'mc-ems'), function () {
@@ -491,19 +514,11 @@ class MCEMS_Settings {
         }
 
         if (isset($input['tutor_gate_course_ids'])) {
-            $ids = $input['tutor_gate_course_ids'];
-            if (!is_array($ids)) $ids = [];
-            $clean = [];
-            foreach ($ids as $id) {
-                $id = absint($id);
-                if ($id > 0) $clean[] = $id;
-            }
-            $clean = array_values(array_unique($clean));
-            if (class_exists('MCEMS_Tutor') && method_exists('MCEMS_Tutor', 'get_courses')) {
-                $valid = array_map('intval', array_keys(MCEMS_Tutor::get_courses()));
-                $clean = array_values(array_intersect($clean, $valid));
-            }
-            $out['tutor_gate_course_ids'] = $clean;
+            $out['tutor_gate_course_ids'] = self::sanitize_course_ids_input($input['tutor_gate_course_ids']);
+        }
+
+        if (isset($input['booking_course_ids'])) {
+            $out['booking_course_ids'] = self::sanitize_course_ids_input($input['booking_course_ids']);
         }
 
         if (isset($input['anticipo_ore_prenotazione'])) $out['anticipo_ore_prenotazione'] = max(0, min(720, (int) $input['anticipo_ore_prenotazione']));
