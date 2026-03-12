@@ -1,7 +1,7 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-class NFEMS_CPT_Sessioni_Esame {
+class MCEMS_CPT_Sessioni_Esame {
 
     const CPT = 'slot_esame'; // keep technical slug for compatibility
 
@@ -16,13 +16,13 @@ class NFEMS_CPT_Sessioni_Esame {
     const MK_COURSE_ID      = 'slot_corso_id'; // int Tutor LMS course ID
 
     // === Legacy meta keys from previous NF-EMS builds (auto-migrated) ===
-    const L_MK_DATE            = '_nfems_slot_date';
-    const L_MK_TIME            = '_nfems_slot_time';
-    const L_MK_CAPACITY        = '_nfems_slot_capacity';
-    const L_MK_PROCTOR_USER_ID = '_nfems_proctor_user_id';
-    const L_MK_IS_SPECIAL      = '_nfems_is_special';
-    const L_MK_SPECIAL_USER_ID = '_nfems_special_user_id';
-    const L_MK_BOOKINGS        = '_nfems_bookings';
+    const L_MK_DATE            = '_mcems_slot_date';
+    const L_MK_TIME            = '_mcems_slot_time';
+    const L_MK_CAPACITY        = '_mcems_slot_capacity';
+    const L_MK_PROCTOR_USER_ID = '_mcems_proctor_user_id';
+    const L_MK_IS_SPECIAL      = '_mcems_is_special';
+    const L_MK_SPECIAL_USER_ID = '_mcems_special_user_id';
+    const L_MK_BOOKINGS        = '_mcems_bookings';
 
     public static function init() {
         add_action('init', [__CLASS__, 'register_cpt']);
@@ -50,18 +50,18 @@ class NFEMS_CPT_Sessioni_Esame {
 
         if (empty($submenu[$parent])) return;
 
-        $create   = null; // nfems-gestione-sessioni
+        $create   = null; // mcems-gestione-sessioni
         $list     = null; // edit.php?post_type=slot_esame  (the CPT "all items" page)
-        $settings = null; // nfems-settings-cpt
+        $settings = null; // mcems-settings-cpt
         $others   = [];
 
         foreach ($submenu[$parent] as $item) {
             $slug = isset($item[2]) ? (string) $item[2] : '';
-            if ($slug === 'nfems-gestione-sessioni') {
+            if ($slug === 'mcems-gestione-sessioni') {
                 $create = $item;
             } elseif ($slug === $parent) {
                 $list = $item;
-            } elseif ($slug === 'nfems-settings-cpt') {
+            } elseif ($slug === 'mcems-settings-cpt') {
                 $settings = $item;
             } else {
                 $others[] = $item;
@@ -88,7 +88,7 @@ class NFEMS_CPT_Sessioni_Esame {
         if (!$screen) return;
         if ($screen->id !== 'edit-' . self::CPT) return;
 
-        $manage_url = admin_url('edit.php?post_type=' . self::CPT . '&page=nfems-gestione-sessioni');
+        $manage_url = admin_url('edit.php?post_type=' . self::CPT . '&page=mcems-gestione-sessioni');
         echo '<style>a.page-title-action[href*="post-new.php?post_type=' . esc_attr(self::CPT) . '"]{display:none !important;}</style>';
         echo '<script>(function(){
             var h1=document.querySelector(".wrap h1");
@@ -132,7 +132,7 @@ class NFEMS_CPT_Sessioni_Esame {
 
     public static function add_metaboxes() {
         add_meta_box(
-            'nfems_session_details',
+            'mcems_session_details',
             __('Session details (MC-EMS)', 'mc-ems'),
             [__CLASS__, 'metabox_html'],
             self::CPT,
@@ -142,7 +142,7 @@ class NFEMS_CPT_Sessioni_Esame {
     }
 
     public static function metabox_html($post) {
-        wp_nonce_field('nfems_session_save', 'nfems_session_nonce');
+        wp_nonce_field('mcems_session_save', 'mcems_session_nonce');
 
         // Prefer canonical keys, fallback legacy
         $date     = (string) get_post_meta($post->ID, self::MK_DATE, true);
@@ -169,8 +169,8 @@ class NFEMS_CPT_Sessioni_Esame {
         if (!$spec_uid) $spec_uid = (int) get_post_meta($post->ID, self::L_MK_SPECIAL_USER_ID, true);
 
         $users = get_users(['fields' => ['ID', 'display_name', 'user_email'], 'number' => 500]);
-        $courses = NFEMS_Tutor::get_courses();
-        $course_pt = NFEMS_Tutor::course_post_type();
+        $courses = MCEMS_Tutor::get_courses();
+        $course_pt = MCEMS_Tutor::course_post_type();
         $course_id = (int) get_post_meta($post->ID, self::MK_COURSE_ID, true);
         $is_past = self::is_past_session($date, $time);
 
@@ -186,7 +186,7 @@ class NFEMS_CPT_Sessioni_Esame {
 if (!$course_pt) {
     echo '<em>Tutor LMS not detected (course post type not found: <code>courses</code> / <code>tutor_course</code>).</em>';
 } else {
-    echo '<select name="nfems_course_id" required ' . $disabled . '><option value="0">— Select course —</option>';
+    echo '<select name="mcems_course_id" required ' . $disabled . '><option value="0">— Select course —</option>';
     foreach ($courses as $cid => $title) {
         printf('<option value="%d" %s>%s</option>',
             (int)$cid,
@@ -200,23 +200,23 @@ echo '<p class="description">This session will be bookable only by selecting thi
 echo '</td></tr>';
 
         echo '<tr><th><label>Date</label></th><td>';
-        printf('<input type="date" id="nfems_date_input" name="nfems_date" value="%s" min="%s" %s />', esc_attr($date), esc_attr(current_time('Y-m-d')), esc_attr($disabled));
+        printf('<input type="date" id="mcems_date_input" name="mcems_date" value="%s" min="%s" %s />', esc_attr($date), esc_attr(current_time('Y-m-d')), esc_attr($disabled));
         echo '</td></tr>';
 
         echo '<tr><th><label>Time</label></th><td>';
-        printf('<input type="time" id="nfems_time_input" name="nfems_time" value="%s" %s />', esc_attr($time), esc_attr($disabled));
+        printf('<input type="time" id="mcems_time_input" name="mcems_time" value="%s" %s />', esc_attr($time), esc_attr($disabled));
         echo '</td></tr>';
 
         // Prevent selecting past time when date is today.
         $today = current_time('Y-m-d');
         $now_time = current_time('H:i');
-        echo '<script>(function(){try{var d=document.getElementById("nfems_date_input");var t=document.getElementById("nfems_time_input");if(!d||!t)return;var today="'.esc_js($today).'";var now="'.esc_js($now_time).'";function apply(){if(d.value===today){t.min=now;}else{t.removeAttribute("min");}}d.addEventListener("change",apply);apply();}catch(e){}})();</script>';
+        echo '<script>(function(){try{var d=document.getElementById("mcems_date_input");var t=document.getElementById("mcems_time_input");if(!d||!t)return;var today="'.esc_js($today).'";var now="'.esc_js($now_time).'";function apply(){if(d.value===today){t.min=now;}else{t.removeAttribute("min");}}d.addEventListener("change",apply);apply();}catch(e){}})();</script>';
 
 
         echo '<tr><th><label>Max seats</label></th><td>';
         $is_premium = defined('EMS_PREMIUM_VERSION');
-        $cap_max = $is_premium ? 500 : NFEMS_Admin_Sessioni::BASE_MAX_CAPACITY;
-        printf('<input type="number" min="1" max="%d" name="nfems_capacity" value="%d" %s %s />',
+        $cap_max = $is_premium ? 500 : MCEMS_Admin_Sessioni::BASE_MAX_CAPACITY;
+        printf('<input type="number" min="1" max="%d" name="mcems_capacity" value="%d" %s %s />',
             $cap_max,
             (int)$capacity,
             ($is_spec ? 'readonly' : ''),
@@ -234,7 +234,7 @@ echo '</td></tr>';
         echo '</td></tr>';
 
         echo '<tr><th><label>Proctor</label></th><td>';
-        echo '<select name="nfems_proctor_user_id" ' . $disabled . '><option value="0">— None —</option>';
+        echo '<select name="mcems_proctor_user_id" ' . $disabled . '><option value="0">— None —</option>';
         foreach ($users as $u) {
             printf(
                 '<option value="%d" %s>%s (%s)</option>',
@@ -248,14 +248,14 @@ echo '</td></tr>';
         echo '</td></tr>';
 
         echo '<tr><th><label>Special requirements</label></th><td>';
-        printf('<label><input type="checkbox" name="nfems_is_special" value="1" %s %s /> ♿ Session for special requirements</label>',
+        printf('<label><input type="checkbox" name="mcems_is_special" value="1" %s %s /> ♿ Session for special requirements</label>',
             checked($is_spec, 1, false),
             esc_attr($disabled)
         );
         echo '</td></tr>';
 
         echo '<tr><th><label>Associated candidate (only ♿)</label></th><td>';
-        echo '<select name="nfems_special_user_id" ' . $disabled . '><option value="0">— None —</option>';
+        echo '<select name="mcems_special_user_id" ' . $disabled . '><option value="0">— None —</option>';
         foreach ($users as $u) {
             printf(
                 '<option value="%d" %s>%s (%s)</option>',
@@ -275,7 +275,7 @@ echo '</td></tr>';
     public static function save_metabox($post_id, $post) {
         if ($post->post_type !== self::CPT) return;
         if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
-        if (!isset($_POST['nfems_session_nonce']) || !wp_verify_nonce($_POST['nfems_session_nonce'], 'nfems_session_save')) return;
+        if (!isset($_POST['mcems_session_nonce']) || !wp_verify_nonce($_POST['mcems_session_nonce'], 'mcems_session_save')) return;
         if (!current_user_can('edit_post', $post_id)) return;
 
         $existing_date = (string) get_post_meta($post_id, self::MK_DATE, true);
@@ -285,8 +285,8 @@ echo '</td></tr>';
             return;
         }
 
-        $date = isset($_POST['nfems_date']) ? sanitize_text_field($_POST['nfems_date']) : '';
-        $time = isset($_POST['nfems_time']) ? sanitize_text_field($_POST['nfems_time']) : '';
+        $date = isset($_POST['mcems_date']) ? sanitize_text_field($_POST['mcems_date']) : '';
+        $time = isset($_POST['mcems_time']) ? sanitize_text_field($_POST['mcems_time']) : '';
 
         // Block past sessions (date + time).
         if ($date && $time && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) && preg_match('/^\d{2}:\d{2}$/', $time)) {
@@ -310,18 +310,18 @@ echo '</td></tr>';
             }
         }
 
-        $proctor  = isset($_POST['nfems_proctor_user_id']) ? (int) $_POST['nfems_proctor_user_id'] : 0;
-        $is_spec  = !empty($_POST['nfems_is_special']) ? 1 : 0;
-        $spec_uid = isset($_POST['nfems_special_user_id']) ? (int) $_POST['nfems_special_user_id'] : 0;
+        $proctor  = isset($_POST['mcems_proctor_user_id']) ? (int) $_POST['mcems_proctor_user_id'] : 0;
+        $is_spec  = !empty($_POST['mcems_is_special']) ? 1 : 0;
+        $spec_uid = isset($_POST['mcems_special_user_id']) ? (int) $_POST['mcems_special_user_id'] : 0;
 
-        $course_id = isset($_POST['nfems_course_id']) ? (int) $_POST['nfems_course_id'] : 0;
+        $course_id = isset($_POST['mcems_course_id']) ? (int) $_POST['mcems_course_id'] : 0;
 
-        $capacity = isset($_POST['nfems_capacity']) ? (int) $_POST['nfems_capacity'] : 10;
+        $capacity = isset($_POST['mcems_capacity']) ? (int) $_POST['mcems_capacity'] : 10;
         if ($capacity < 1) $capacity = 1;
 
         // Base license: cap capacity to the allowed maximum.
         if (!defined('EMS_PREMIUM_VERSION') && !$is_spec) {
-            $capacity = min($capacity, NFEMS_Admin_Sessioni::BASE_MAX_CAPACITY);
+            $capacity = min($capacity, MCEMS_Admin_Sessioni::BASE_MAX_CAPACITY);
         }
 
         // In modalità ♿: capienza sempre 1
@@ -399,23 +399,23 @@ echo '</td></tr>';
         $new['cb'] = $cols['cb'] ?? '';
         $new['title'] = __('Session', 'mc-ems');
         // Subito dopo __('Session', 'mc-ems')
-        $new['nfems_course'] = 'Course';
-        $new['nfems_date'] = __('Date', 'mc-ems');
-        $new['nfems_time'] = 'Time';
-        $new['nfems_cap']  = __('Seats', 'mc-ems');
-        $new['nfems_book'] = __('Booked', 'mc-ems');
+        $new['mcems_course'] = 'Course';
+        $new['mcems_date'] = __('Date', 'mc-ems');
+        $new['mcems_time'] = 'Time';
+        $new['mcems_cap']  = __('Seats', 'mc-ems');
+        $new['mcems_book'] = __('Booked', 'mc-ems');
         // Niente colonna data di pubblicazione
         return $new;
     }
 
     public static function column_render($col, $post_id) {
-        if ($col === 'nfems_course') {
+        if ($col === 'mcems_course') {
             $course_id = (int) get_post_meta($post_id, self::MK_COURSE_ID, true);
             echo $course_id ? esc_html(get_the_title($course_id)) : '—';
             return;
         }
 
-        if ($col === 'nfems_date') {
+        if ($col === 'mcems_date') {
             $raw = (string) get_post_meta($post_id, self::MK_DATE, true);
             $raw = trim($raw);
 
@@ -442,17 +442,17 @@ echo '</td></tr>';
             return;
         }
 
-        if ($col === 'nfems_time') {
+        if ($col === 'mcems_time') {
             echo esc_html(get_post_meta($post_id, self::MK_TIME, true));
             return;
         }
 
-        if ($col === 'nfems_cap')  {
+        if ($col === 'mcems_cap')  {
             echo (int) get_post_meta($post_id, self::MK_CAPACITY, true);
             return;
         }
 
-        if ($col === 'nfems_book') {
+        if ($col === 'mcems_book') {
             $occ = get_post_meta($post_id, self::MK_OCCUPATI, true);
             echo is_array($occ) ? count($occ) : 0;
             return;

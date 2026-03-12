@@ -6,15 +6,15 @@
     const fd = new FormData();
     fd.append("action", action);
     Object.keys(data || {}).forEach(k => fd.append(k, data[k]));
-    return fetch(NFEMS_BOOKING.ajaxUrl, { method: "POST", credentials: "same-origin", body: fd })
+    return fetch(MCEMS_BOOKING.ajaxUrl, { method: "POST", credentials: "same-origin", body: fd })
       .then(r => r.json());
   }
 
   // Prenota: carica sessioni per data
-  $all("[data-nfems-booking]").forEach(function (wrap) {
-    const dateInput = $(".nfems-date", wrap);
-    const sessBox   = $(".nfems-sessions", wrap);
-    const msgBox    = $(".nfems-msg", wrap);
+  $all("[data-mcems-booking]").forEach(function (wrap) {
+    const dateInput = $(".mcems-date", wrap);
+    const sessBox   = $(".mcems-sessions", wrap);
+    const msgBox    = $(".mcems-msg", wrap);
 
     function setMsg(t, isErr) {
       msgBox.textContent = t || "";
@@ -29,12 +29,12 @@
       }
 
       const ul = document.createElement("ul");
-      ul.className = "nfems-session-list";
+      ul.className = "mcems-session-list";
       items.forEach(function (s) {
         const li = document.createElement("li");
         li.innerHTML =
           `<label>
-            <input type="radio" name="nfems_session_id" value="${s.id}">
+            <input type="radio" name="mcems_session_id" value="${s.id}">
             <strong>${s.time}</strong> ${s.label}
           </label>`;
         ul.appendChild(li);
@@ -46,8 +46,8 @@
       dateInput.addEventListener("change", function () {
         setMsg("");
         renderSessions([]);
-        post("nfems_get_sessions_by_date", {
-          nonce: NFEMS_BOOKING.nonce,
+        post("mcems_get_sessions_by_date", {
+          nonce: MCEMS_BOOKING.nonce,
           date: dateInput.value
         }).then(function (res) {
           if (!res || !res.success) {
@@ -59,21 +59,21 @@
       });
     }
 
-    const bookBtn = $(".nfems-book-btn", wrap);
+    const bookBtn = $(".mcems-book-btn", wrap);
     if (bookBtn) {
       bookBtn.addEventListener("click", function (e) {
         e.preventDefault();
         setMsg("");
 
-        const checked = $("input[name='nfems_session_id']:checked", wrap);
+        const checked = $("input[name='mcems_session_id']:checked", wrap);
         if (!checked) {
           setMsg("Select an exam session before booking.", true);
           return;
         }
 
         bookBtn.disabled = true;
-        post("nfems_confirm_booking", {
-          nonce: NFEMS_BOOKING.nonce,
+        post("mcems_confirm_booking", {
+          nonce: MCEMS_BOOKING.nonce,
           session_id: checked.value
         }).then(function (res) {
           bookBtn.disabled = false;
@@ -89,9 +89,9 @@
   });
 
   // Gestisci: cancella
-  $all("[data-nfems-manage]").forEach(function (wrap) {
-    const cancelBtn = $(".nfems-cancel-btn", wrap);
-    const msgBox = $(".nfems-msg", wrap);
+  $all("[data-mcems-manage]").forEach(function (wrap) {
+    const cancelBtn = $(".mcems-cancel-btn", wrap);
+    const msgBox = $(".mcems-msg", wrap);
 
     function setMsg(t, isErr) {
       msgBox.textContent = t || "";
@@ -106,7 +106,7 @@
         if (!confirm("Do you want to cancel the booking?")) return;
 
         cancelBtn.disabled = true;
-        post("nfems_cancel_booking", { nonce: NFEMS_BOOKING.nonce })
+        post("mcems_cancel_booking", { nonce: MCEMS_BOOKING.nonce })
           .then(function (res) {
             cancelBtn.disabled = false;
             if (!res || !res.success) {

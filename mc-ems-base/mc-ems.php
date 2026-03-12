@@ -12,48 +12,48 @@ Requires PHP: 7.0
 
 if (!defined('ABSPATH')) exit;
 
-define('NFEMS_VERSION', '2.4.2-base');
-define('NFEMS_DB_VERSION', '1.4.5');
-define('NFEMS_PLUGIN_DIR', plugin_dir_path(__FILE__));
-define('NFEMS_PLUGIN_URL', plugin_dir_url(__FILE__));
+define('MCEMS_VERSION', '2.4.2-base');
+define('MCEMS_DB_VERSION', '1.4.5');
+define('MCEMS_PLUGIN_DIR', plugin_dir_path(__FILE__));
+define('MCEMS_PLUGIN_URL', plugin_dir_url(__FILE__));
 
-require_once NFEMS_PLUGIN_DIR . 'includes/class-nfems-settings.php';
-require_once NFEMS_PLUGIN_DIR . 'includes/class-nfems-tutor.php';
-require_once NFEMS_PLUGIN_DIR . 'includes/class-nfems-tutor-gate.php';
-require_once NFEMS_PLUGIN_DIR . 'includes/class-nfems-upgrader.php';
-require_once NFEMS_PLUGIN_DIR . 'includes/class-nfems-cpt-sessioni-esame.php';
-require_once NFEMS_PLUGIN_DIR . 'includes/class-ems-session-id-column.php';
-require_once NFEMS_PLUGIN_DIR . 'includes/class-nfems-booking.php';
-require_once NFEMS_PLUGIN_DIR . 'includes/class-nfems-bookings-list.php';
-require_once NFEMS_PLUGIN_DIR . 'includes/class-nfems-calendar-sessioni.php';
-require_once NFEMS_PLUGIN_DIR . 'includes/class-nfems-admin-sessioni.php';
-require_once NFEMS_PLUGIN_DIR . 'includes/class-nfems-admin-banner.php';
+require_once MCEMS_PLUGIN_DIR . 'includes/class-mcems-settings.php';
+require_once MCEMS_PLUGIN_DIR . 'includes/class-mcems-tutor.php';
+require_once MCEMS_PLUGIN_DIR . 'includes/class-mcems-tutor-gate.php';
+require_once MCEMS_PLUGIN_DIR . 'includes/class-mcems-upgrader.php';
+require_once MCEMS_PLUGIN_DIR . 'includes/class-mcems-cpt-sessioni-esame.php';
+require_once MCEMS_PLUGIN_DIR . 'includes/class-ems-session-id-column.php';
+require_once MCEMS_PLUGIN_DIR . 'includes/class-mcems-booking.php';
+require_once MCEMS_PLUGIN_DIR . 'includes/class-mcems-bookings-list.php';
+require_once MCEMS_PLUGIN_DIR . 'includes/class-mcems-calendar-sessioni.php';
+require_once MCEMS_PLUGIN_DIR . 'includes/class-mcems-admin-sessioni.php';
+require_once MCEMS_PLUGIN_DIR . 'includes/class-mcems-admin-banner.php';
 
 register_activation_hook(__FILE__, function () {
     // Ensure options exist + merge defaults
-    NFEMS_Upgrader::maybe_upgrade();
+    MCEMS_Upgrader::maybe_upgrade();
 });
 
 add_action('plugins_loaded', function () {
     load_plugin_textdomain('mc-ems', false, dirname(plugin_basename(__FILE__)) . '/languages');
 
-    NFEMS_Upgrader::maybe_upgrade();
+    MCEMS_Upgrader::maybe_upgrade();
 
     if (is_admin()) {
-        NFEMS_Settings::init_admin();
+        MCEMS_Settings::init_admin();
     }
 
-    NFEMS_CPT_Sessioni_Esame::init();
+    MCEMS_CPT_Sessioni_Esame::init();
     EMS_Session_ID_Column::init();
-    NFEMS_Booking::init();
-    NFEMS_Tutor_Gate::init();
-    NFEMS_Bookings_List_Base::init();
+    MCEMS_Booking::init();
+    MCEMS_Tutor_Gate::init();
+    MCEMS_Bookings_List_Base::init();
 
-    NFEMS_Calendar_Sessioni::init();
+    MCEMS_Calendar_Sessioni::init();
 
     if (is_admin()) {
-        NFEMS_Admin_Sessioni::init();
-        NFEMS_Admin_Banner::init();
+        MCEMS_Admin_Sessioni::init();
+        MCEMS_Admin_Banner::init();
 
         // AJAX: user search by email (special sessions)
         add_action('wp_ajax_mcems_user_search', function () {
