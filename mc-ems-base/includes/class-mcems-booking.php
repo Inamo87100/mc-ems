@@ -201,6 +201,10 @@ class MCEMS_Booking {
     public static function shortcode_prenota(): string {
         $user_id   = (int) get_current_user_id();
         $courses   = MCEMS_Tutor::get_courses();
+        $booking_course_ids = MCEMS_Settings::get_booking_course_ids();
+        if (!empty($booking_course_ids)) {
+            $courses = array_intersect_key($courses, array_flip($booking_course_ids));
+        }
         $course_pt = MCEMS_Tutor::course_post_type();
 
         ob_start();
