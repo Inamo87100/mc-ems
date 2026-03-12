@@ -191,7 +191,7 @@ class MCEMS_Admin_Sessioni {
                                 <th><label for="mcems_capacity"><?php echo esc_html__('Seats per exam session', 'mc-ems'); ?></label></th>
                                 <td>
                                     <?php if (!$is_premium): ?>
-                                        <input type="number" id="mcems_capacity" name="capacity" min="1">
+                                        <input type="number" id="mcems_capacity" name="capacity" min="1" max="<?php echo (int) self::BASE_MAX_CAPACITY; ?>">
                                         <p class="description"><?php echo esc_html(sprintf(__('Base license: max %d seats per session.', 'mc-ems'), self::BASE_MAX_CAPACITY)); ?></p>
                                     <?php else: ?>
                                         <input type="number" id="mcems_capacity" name="capacity" min="1" max="500">
