@@ -62,7 +62,7 @@ class MCEMS_Bookings_List {
         // UTF-8 BOM for Excel
         fprintf($out, chr(0xEF).chr(0xBB).chr(0xBF));
 
-        fputcsv($out, ['Last name','First name','Email','Exam session date','Exam session time','Course','Special','Proctor'], ';');
+        fputcsv($out, ['Last name','First name','Email','Session ID','Exam session date','Exam session time','Course','Special','Proctor'], ';');
 
         foreach ($rows as $r) {
             $data_h = '';
@@ -77,6 +77,7 @@ class MCEMS_Bookings_List {
                 $r['cognome'] ?? '',
                 $r['nome'] ?? '',
                 $r['email'] ?? '',
+                $r['session_id'] ?? '',
                 $data_h,
                 $r['ora'] ?? '',
                 $corso_t,
@@ -201,6 +202,7 @@ class MCEMS_Bookings_List {
                 if ($fn === '' && $ln === '') $fn = $u->display_name;
 
                 $rows[] = [
+                    'session_id' => $sid,
                     'cognome' => $ln,
                     'nome'    => $fn,
                     'email'   => $u->user_email,
@@ -422,6 +424,7 @@ ob_start();
                                     <th><?php echo esc_html('Last name'); ?></th>
                                     <th><?php echo esc_html('First name'); ?></th>
                                     <th><?php echo esc_html('Email'); ?></th>
+                                    <th><?php echo esc_html('Session ID'); ?></th>
                                     <th><?php echo esc_html('Exam session date'); ?></th>
                                     <th><?php echo esc_html('Exam session time'); ?></th>
                                     <th><?php echo esc_html('Course'); ?></th>
@@ -431,12 +434,13 @@ ob_start();
                             </thead>
                             <tbody>
                             <?php if (!$rows): ?>
-                                <tr><td colspan="8" style="text-align:center;color:#667085;padding:14px;">No exam bookings found for these filters.</td></tr>
+                                <tr><td colspan="9" style="text-align:center;color:#667085;padding:14px;">No exam bookings found for these filters.</td></tr>
                             <?php else: foreach ($rows as $r): ?>
                                 <tr>
                                     <td><?php echo esc_html($r['cognome']); ?></td>
                                     <td><?php echo esc_html($r['nome']); ?></td>
                                     <td><?php echo esc_html($r['email']); ?></td>
+                                    <td><?php echo esc_html($r['session_id']); ?></td>
                                     <td><?php echo esc_html( date_i18n('d/m/Y', strtotime($r['data'])) ); ?></td>
                                     <td><?php echo esc_html($r['ora']); ?></td>
                                     <td><?php echo esc_html(MCEMS_Tutor::course_title((int)$r['corso'])); ?></td>
