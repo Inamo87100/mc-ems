@@ -20,6 +20,8 @@ class MCEMS_Booking {
         add_action('wp_ajax_mcems_get_booking_calendar', [__CLASS__, 'ajax_get_booking_calendar']);
         add_action('wp_ajax_nopriv_mcems_get_booking_calendar', [__CLASS__, 'ajax_get_booking_calendar']);
 
+        add_action('wp_ajax_mcems_check_active_booking', [__CLASS__, 'ajax_check_active_booking']);
+
         add_action('wp_ajax_conferma_prenotazione_slot', [__CLASS__, 'ajax_confirm_booking']);
         add_action('wp_ajax_nopriv_conferma_prenotazione_slot', [__CLASS__, 'ajax_confirm_booking']);
 
@@ -274,6 +276,8 @@ class MCEMS_Booking {
 
                 <input type="hidden" id="data_esame" name="data_esame" value="" />
 
+                <div id="mcems-booking-message" style="display:none; margin-bottom:20px; padding:10px; text-align:center;"></div>
+
                 <div id="mcems-booking-calendar-wrap" style="display:none; margin-bottom:20px;">
                     <label style="font-weight:bold; display:block; margin-bottom:8px; text-align:center;">Choose a date:</label>
 
@@ -339,6 +343,7 @@ class MCEMS_Booking {
                     currentMonthDate.setDate(1);
 
                     const monthCache = {};
+                    const manageBookingUrl = <?php echo json_encode(MCEMS_Settings::get_manage_booking_page_url() ?: ''); ?>;
 
                     function formatDate(date) {
                         const y = date.getFullYear();
@@ -357,6 +362,62 @@ class MCEMS_Booking {
                         if (calendarWrap) {
                             calendarWrap.style.display = show ? 'block' : 'none';
                         }
+                    }
+
+                    function showBookingMessage(msg) {
+                        const messageEl = document.getElementById('mcems-booking-message');
+                        if (messageEl) {
+                            messageEl.innerHTML = msg;
+                            messageEl.style.display = 'block';
+                        }
+                        showCalendar(false);
+                        resetSlots('');
+                    }
+
+                    function hideBookingMessage() {
+                        const messageEl = document.getElementById('mcems-booking-message');
+                        if (messageEl) {
+                            messageEl.style.display = 'none';
+                            messageEl.innerHTML = '';
+                        }
+                    }
+
+                    function checkExistingBooking() {
+                        const courseId = courseSelect ? courseSelect.value : '';
+                        if (!courseId) {
+                            hideBookingMessage();
+                            showCalendar(false);
+                            return;
+                        }
+
+                        const url = '<?php echo esc_url(admin_url('admin-ajax.php')); ?>?action=mcems_check_active_booking&course_id='
+                            + encodeURIComponent(courseId);
+
+                        fetch(url)
+                            .then(r => r.json())
+                            .then(data => {
+                                if (data && data.has_booking) {
+                                    let msg = '<p style="text-align:center;">'
+                                        + '<?php echo esc_js(__('You already have an active exam booking for this course.', 'mc-ems')); ?>'
+                                        + '<br>';
+                                    if (manageBookingUrl) {
+                                        msg += '<?php echo esc_js(__('Go to', 'mc-ems')); ?> <a href="' + manageBookingUrl + '">'
+                                            + '<?php echo esc_js(__('Manage exam booking', 'mc-ems')); ?>'
+                                            + '</a> <?php echo esc_js(__('to cancel it.', 'mc-ems')); ?>';
+                                    } else {
+                                        msg += '<?php echo esc_js(__('Please open the Manage exam booking page to cancel it.', 'mc-ems')); ?>';
+                                    }
+                                    msg += '</p>';
+                                    showBookingMessage(msg);
+                                } else {
+                                    hideBookingMessage();
+                                    renderBookingCalendar();
+                                }
+                            })
+                            .catch(() => {
+                                hideBookingMessage();
+                                renderBookingCalendar();
+                            });
                     }
 
                     function ensureCourseSelected() {
@@ -581,7 +642,7 @@ class MCEMS_Booking {
                             }
 
                             resetSlots('<p style="color:#888;">Select a date from the calendar.</p>');
-                            renderBookingCalendar();
+                            checkExistingBooking();
                         });
                     }
 
@@ -792,6 +853,18 @@ class MCEMS_Booking {
        AJAX
        ========================= */
 
+    public static function ajax_check_active_booking(): void {
+        $user_id   = (int) get_current_user_id();
+        $course_id = isset($_GET['course_id']) ? (int) $_GET['course_id'] : 0;
+
+        if (!$user_id || $course_id <= 0) {
+            wp_send_json(['has_booking' => false]);
+        }
+
+        $active = self::get_active_booking_for_course($user_id, $course_id);
+        wp_send_json(['has_booking' => !empty($active['slot_id'])]);
+    }
+
     public static function ajax_get_booking_calendar(): void {
         $course_id = isset($_GET['course_id']) ? (int) $_GET['course_id'] : 0;
         $year      = isset($_GET['year']) ? (int) $_GET['year'] : 0;
@@ -801,20 +874,6 @@ class MCEMS_Booking {
         if ($year <= 0 || $month < 1 || $month > 12) wp_send_json([]);
 
         $user_id = (int) get_current_user_id();
-
-        if ($user_id) {
-            $active = self::get_active_booking_for_course($user_id, $course_id);
-            if (!empty($active['slot_id'])) {
-                $manage_url = MCEMS_Settings::get_manage_booking_page_url();
-                if ($manage_url) {
-                    $manage_link = '<a href="' . esc_url($manage_url) . '">' . esc_html__('Manage exam booking', 'mc-ems') . '</a>';
-                    $msg = '<div style="text-align: center;">' . sprintf(__('You already have an active exam booking for this course.<br>Go to %s to cancel it.', 'mc-ems'), $manage_link) . '</div>';
-                } else {
-                    $msg = '<div style="text-align: center;">' . __('You already have an active exam booking for this course.<br>Please open the Manage exam booking page to cancel it.', 'mc-ems') . '</div>';
-                }
-                wp_send_json(['error' => $msg]);
-            }
-        }
 
         $start = sprintf('%04d-%02d-01', $year, $month);
         $end   = date('Y-m-t', strtotime($start));
@@ -883,23 +942,6 @@ class MCEMS_Booking {
         if ($course_id <= 0) wp_send_json(['error' => 'Select a course.']);
 
         $user_id = (int) get_current_user_id();
-
-        if ($user_id) {
-            $active = self::get_active_booking_for_course($user_id, $course_id);
-            if (!empty($active['slot_id'])) {
-                $manage_url = MCEMS_Settings::get_manage_booking_page_url();
-                if ($manage_url) {
-                    $manage_link = '<a href="' . esc_url($manage_url) . '">' . esc_html__('Manage exam booking', 'mc-ems') . '</a>';
-                    $msg = '<div style="text-align: center;">' . sprintf(
-                        __('You already have an active exam booking for this course.<br>Go to %s to cancel it.', 'mc-ems'),
-                        $manage_link
-                    ) . '</div>';
-                } else {
-                    $msg = '<div style="text-align: center;">' . __('You already have an active exam booking for this course.<br>Please open the Manage exam booking page to cancel it.', 'mc-ems') . '</div>';
-                }
-                wp_send_json(['error' => $msg]);
-            }
-        }
 
         $meta_query = [
             [
