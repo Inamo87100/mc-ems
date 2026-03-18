@@ -1146,6 +1146,7 @@ class MCEMS_Calendar_Sessioni {
         if (self::is_slot_assigned($slot_id)) {
             $name = self::get_slot_assigned_name($slot_id);
             wp_send_json_error(['message' => $name
+                // translators: %s is the name of the user already assigned to this session
                 ? sprintf(__('This session is already assigned to %s.', 'mc-ems-base'), $name)
                 : __('This session is already assigned.', 'mc-ems-base')
             ], 409);

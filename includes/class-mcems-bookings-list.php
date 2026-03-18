@@ -283,7 +283,9 @@ class MCEMS_Bookings_List_Base {
         <div class="mcems-adminwrap">
             <div class="mcems-panel">
                 <h3 class="mcems-title"><?php echo esc_html__('Bookings list', 'mc-ems-base'); ?></h3>
-                <p class="mcems-desc"><?php echo sprintf(esc_html__('Filter by %1$sdate%2$s (single day or date range). You can also filter by exam.', 'mc-ems-base'), '<strong>', '</strong>'); ?></p>
+                <p class="mcems-desc"><?php
+                // translators: %1$s and %2$s are HTML <strong> tags wrapping the word "date"
+                echo sprintf(esc_html__('Filter by %1$sdate%2$s (single day or date range). You can also filter by exam.', 'mc-ems-base'), '<strong>', '</strong>'); ?></p>
 
                 <div class="mcems-search-toggle" style="margin:8px 0 14px 0;">
                     <button type="button" id="mcems_adv_btn" class="mcems-btn" aria-pressed="false">
@@ -388,7 +390,9 @@ class MCEMS_Bookings_List_Base {
                 </form>
 
                 <?php if (!$has_filter): ?>
-                    <div class="mcems-empty">📌 <?php echo sprintf(esc_html__('Select a date filter and press %1$sFilter%2$s to see the bookings list.', 'mc-ems-base'), '<strong>', '</strong>'); ?></div>
+                    <div class="mcems-empty">📌 <?php
+                    // translators: %1$s and %2$s are HTML <strong> tags wrapping the word "Filter"
+                    echo sprintf(esc_html__('Select a date filter and press %1$sFilter%2$s to see the bookings list.', 'mc-ems-base'), '<strong>', '</strong>'); ?></div>
                 <?php else: ?>
 
                     <?php

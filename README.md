@@ -1,11 +1,11 @@
-# MC-EMS – Exam Session Management for Tutor LMS
+# MC-EMS – Exam Center for Tutor LMS
 
 **Contributors:** Mamba Coding  
 **Tags:** exam, booking, tutor lms, exam management, sessions  
-**Requires at least:** 5.0  
+**Requires at least:** 6.0  
 **Tested up to:** 6.9  
-**Stable tag:** 2.5.0  
-**Requires PHP:** 7.2  
+**Stable tag:** 1.0.0  
+**Requires PHP:** 7.4  
 **License:** GPL-2.0-or-later  
 **License URI:** https://www.gnu.org/licenses/gpl-2.0-or-later.html
 
