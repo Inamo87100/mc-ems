@@ -1,23 +1,20 @@
 <?php
 /**
- * Plugin Name:       MC-EMS – Exam Session Management for Tutor LMS
- * Plugin URI:        https://github.com/Inamo87100/mc-ems-base
- * Description:       Exam Management System – base module.
- * Version:           2.5.0
- * Author:            Mamba Coding
- * Author URI:        https://mambacoding.com/
- * License:           GPL-2.0-or-later
- * License URI:       https://www.gnu.org/licenses/gpl-2.0-or-later.html
- * Text Domain:       mc-ems-base
- * Domain Path:       /languages
- * Requires at least:  5.0
- * Requires PHP:      7.2
+ * Plugin Name: MC-EMS – Exam Center for Tutor LMS
+ * Description: Advanced exam session management system for Tutor LMS with booking calendar, student reservations, and exam access control.
+ * Version: 1.0.0
+ * Author: Mamba Coding
+ * Author URI: https://mambacoding.com
+ * Text Domain: mc-ems-base
+ * Domain Path: /languages
+ * License: GPL v2 or later
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  */
 if (!defined('ABSPATH')) exit;
 
 // Constants
-define('MCEMS_VERSION',    '2.5.0');
-define('MCEMS_DB_VERSION', '2.5.0');
+define('MCEMS_VERSION',    '1.0.0');
+define('MCEMS_DB_VERSION', '1.0.0');
 define('MCEMS_PLUGIN_URL',  plugin_dir_url(__FILE__));
 define('MCEMS_PLUGIN_PATH', plugin_dir_path(__FILE__));
 
