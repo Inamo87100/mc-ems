@@ -927,8 +927,8 @@ class MCEMS_Calendar_Sessioni {
     public static function ajax_get_slot_data(): void {
         check_ajax_referer(self::NONCE_ACTION);
 
-        $year  = isset($_GET['year'])  ? (int) wp_unslash($_GET['year'])  : 0;
-        $month = isset($_GET['month']) ? (int) wp_unslash($_GET['month']) : 0;
+        $year  = absint($_GET['year'] ?? 0);
+        $month = absint($_GET['month'] ?? 0);
 
         $args = [
             'post_type'      => self::cpt(),
