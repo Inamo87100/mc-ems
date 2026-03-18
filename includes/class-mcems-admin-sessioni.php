@@ -947,9 +947,9 @@ class MCEMS_Admin_Sessioni {
         check_admin_referer('mcems_generate', 'mcems_generate_nonce');
         $date      = sanitize_text_field(wp_unslash($_POST['special_date'] ?? ''));
         $time      = sanitize_text_field(wp_unslash($_POST['special_time'] ?? ''));
-        $uid       = (int) wp_unslash($_POST['special_user_id'] ?? 0);
+        $uid     = absint($_POST['special_user_id'] ?? 0);
         $email     = sanitize_email(wp_unslash($_POST['special_user_email'] ?? ''));
-        $exam_id = isset($_POST['special_exam_id']) ? (int) wp_unslash($_POST['special_exam_id']) : 0;
+        $exam_id = absint($_POST['special_exam_id'] ?? 0);
 
         if ($exam_id <= 0) {
             return ['', 'Select a Tutor LMS exam.'];
@@ -1025,7 +1025,7 @@ class MCEMS_Admin_Sessioni {
 
     private static function handle_update_capacity(): array {
         check_admin_referer('mcems_update_capacity', 'mcems_update_capacity_nonce');
-        $new_cap     = max(1, (int) wp_unslash($_POST['new_capacity'] ?? 1));
+        $new_cap     = max(1, absint($_POST['new_capacity'] ?? 0));
         $only_future = !empty($_POST['only_future']);
 
         $ids = get_posts([

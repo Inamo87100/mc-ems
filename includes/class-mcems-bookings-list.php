@@ -208,17 +208,16 @@ class MCEMS_Bookings_List_Base {
             }
             $spec = !empty($r['special']) ? 'Yes' : 'No';
 
-            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CSV output, not HTML
-            echo self::format_csv_row([
-                $r['cognome'] ?? '',
-                $r['nome']    ?? '',
-                $r['email']   ?? '',
-                $r['session_id'] ?? '',
-                $data_h,
-                $r['ora']     ?? '',
-                $corso_t,
-                $spec,
-                $r['proctor'] ?? '',
+            echo self::format_csv_row([ // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CSV output, not HTML
+                esc_html($r['cognome'] ?? ''),
+                esc_html($r['nome']    ?? ''),
+                esc_html($r['email']   ?? ''),
+                esc_html($r['session_id'] ?? ''),
+                esc_html($data_h),
+                esc_html($r['ora']     ?? ''),
+                esc_html($corso_t),
+                esc_html($spec),
+                esc_html($r['proctor'] ?? ''),
             ]);
         }
 
@@ -243,11 +242,14 @@ class MCEMS_Bookings_List_Base {
         $exams = MCEMS_Tutor::get_exams();
         $exam_pt = MCEMS_Tutor::exam_post_type();
 
-        $selected_date  = isset($_GET['mcems_date']) ? sanitize_text_field(wp_unslash($_GET['mcems_date'])) : '';
-        $date_from      = isset($_GET['mcems_from']) ? sanitize_text_field(wp_unslash($_GET['mcems_from'])) : '';
-        $date_to        = isset($_GET['mcems_to']) ? sanitize_text_field(wp_unslash($_GET['mcems_to'])) : '';
-        $selected_exam = isset($_GET['mcems_exam']) ? absint(wp_unslash($_GET['mcems_exam'])) : 0;
-        $advanced       = isset($_GET['mcems_adv']) && sanitize_text_field(wp_unslash($_GET['mcems_adv'])) === '1';
+        $filter_nonce  = isset($_GET['mcems_filter_nonce']) ? sanitize_text_field(wp_unslash($_GET['mcems_filter_nonce'])) : '';
+        $nonce_valid   = wp_verify_nonce($filter_nonce, 'mcems_filter');
+
+        $selected_date  = ($nonce_valid && isset($_GET['mcems_date'])) ? sanitize_text_field(wp_unslash($_GET['mcems_date'])) : '';
+        $date_from      = ($nonce_valid && isset($_GET['mcems_from'])) ? sanitize_text_field(wp_unslash($_GET['mcems_from'])) : '';
+        $date_to        = ($nonce_valid && isset($_GET['mcems_to'])) ? sanitize_text_field(wp_unslash($_GET['mcems_to'])) : '';
+        $selected_exam  = ($nonce_valid && isset($_GET['mcems_exam'])) ? absint(wp_unslash($_GET['mcems_exam'])) : 0;
+        $advanced       = $nonce_valid && isset($_GET['mcems_adv']) && sanitize_text_field(wp_unslash($_GET['mcems_adv'])) === '1';
 
         $filter     = self::normalize_date_filter($selected_date, $date_from, $date_to, $advanced);
         $has_filter = (bool) $filter;
@@ -292,10 +294,11 @@ class MCEMS_Bookings_List_Base {
                 <form method="get" class="mcems-filters">
                     <input type="hidden" name="post_type" value="<?php echo esc_attr(MCEMS_CPT_Sessioni_Esame::CPT); ?>">
                     <?php
-                    if (isset($_GET['page'])) {
-                        echo '<input type="hidden" name="page" value="' . esc_attr(sanitize_text_field(wp_unslash($_GET['page']))) . '">';
+                    if (isset($_GET['page'])) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- WordPress admin page slug, read-only navigation
+                        echo '<input type="hidden" name="page" value="' . esc_attr(sanitize_text_field(wp_unslash($_GET['page']))) . '">'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
                     }
                     ?>
+                    <input type="hidden" name="mcems_filter_nonce" value="<?php echo esc_attr(wp_create_nonce('mcems_filter')); ?>">
                     <input type="hidden" name="mcems_export_nonce" value="<?php echo esc_attr(wp_create_nonce('mcems_export_csv')); ?>">
 
                     <input type="hidden" id="mcems_adv" name="mcems_adv" value="<?php echo esc_attr($advanced ? '1' : '0'); ?>">
